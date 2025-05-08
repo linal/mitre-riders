@@ -28,7 +28,7 @@ app.get('/api/race-data', async (req, res) => {
   }
 
   try {
-    const url = `https://www.britishcycling.org.uk/points?person_id=${person_id}&year=${year}`;
+    const url = `https://www.britishcycling.org.uk/points?d=4&person_id=${person_id}&year=${year}`;
     const response = await fetch(url);
     const html = await response.text();
 
