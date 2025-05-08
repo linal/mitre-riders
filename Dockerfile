@@ -23,6 +23,4 @@
     EXPOSE 4173
     EXPOSE 3001
     
-    CMD concurrently \
-      "serve -s client -l 4173" \
-      "node server.js"
+    CMD ["npm", "start"]
