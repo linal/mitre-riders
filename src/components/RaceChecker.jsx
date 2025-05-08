@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 
 const racers = [
@@ -86,12 +85,16 @@ export default function RaceChecker() {
       <div className="flex flex-wrap items-center gap-4">
         <div className="flex items-center gap-2">
           <label>Year:</label>
-          <input
-            type="text"
-            value={year}
-            onChange={(e) => setYear(e.target.value)}
-            className="w-24 border px-2 py-1 rounded"
-          />
+<select
+  value={year}
+  onChange={(e) => setYear(e.target.value)}
+  className="border rounded px-2 py-1"
+>
+  {[...Array(10)].map((_, i) => {
+    const y = 2025 - i;
+    return <option key={y} value={y}>{y}</option>;
+  })}
+</select>
           <button
             onClick={handleCheckAll}
             disabled={loading}
