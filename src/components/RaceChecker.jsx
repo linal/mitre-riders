@@ -139,7 +139,7 @@ export default function RaceChecker() {
               {data[racer.bc] ? `Points: ${data[racer.bc].points}` : ""}
             </div>
             <button
-              onClick={() => window.open(`https://www.britishcycling.org.uk/points?person_id=${racer.bc}&year=${year}`, "_blank")}
+              onClick={() => window.open(`https://www.britishcycling.org.uk/points?d=4&person_id=${racer.bc}&year=${year}`, "_blank")}
               className="bg-gray-200 px-3 py-1 rounded"
             >
               View Results
