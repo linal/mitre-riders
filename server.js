@@ -1,11 +1,13 @@
 const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
+const path = require('path');
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3000;
 
 app.use(cors());
+app.use(express.static(path.join(__dirname, 'client')));
 
 app.get('/api/race-data', async (req, res) => {
   const { person_id, year } = req.query;
@@ -24,6 +26,11 @@ app.get('/api/race-data', async (req, res) => {
   }
 });
 
+// Serve React app for all other routes
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'client', 'index.html'));
+});
+
 app.listen(PORT, () => {
-  console.log(`Proxy server running on http://localhost:${PORT}`);
+  console.log(`App running on http://localhost:${PORT}`);
 });

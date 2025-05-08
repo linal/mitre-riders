@@ -9,7 +9,7 @@
     COPY . .
     RUN npm run build
     
-    # ---------- Stage 2: Serve React + Proxy ----------
+    # ---------- Stage 2: Serve with Express ----------
     FROM node:18
     
     WORKDIR /app
@@ -17,10 +17,11 @@
     COPY package.json package-lock.json* ./
     RUN npm install --omit=dev
     
+    # Copy built React app
     COPY --from=builder /app/dist ./client
     COPY server.js .
     
-    EXPOSE 4173
-    EXPOSE 3001
+    EXPOSE 3000
     
-    CMD ["npm", "start"]
+    CMD ["node", "server.js"]
+    
