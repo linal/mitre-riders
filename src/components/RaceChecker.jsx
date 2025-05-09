@@ -19,7 +19,8 @@ const racers = [
 ];
 
 async function fetchRaceData(personId, year) {
-  const url = `http://localhost:3000/api/race-data?person_id=${personId}&year=${year}`;
+  const apiBase = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+  const url = `${apiBase}/api/race-data?person_id=${personId}&year=${year}`;
   const response = await fetch(url);
   return await response.json();
 }
