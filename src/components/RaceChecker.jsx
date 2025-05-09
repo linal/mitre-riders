@@ -1,21 +1,21 @@
 import React, { useState } from "react";
 
 const racers = [
-  //{ name: "Marek Shafer", bc: "670931" },
-  //{ name: "Alwyn Frank", bc: "482041" },
+  { name: "Marek Shafer", bc: "670931" },
+  { name: "Alwyn Frank", bc: "482041" },
   { name: "Nathan Cozens", bc: "987321" },
-  //{ name: "Cesare Masset", bc: "1148505" },
-  //{ name: "John Tindell", bc: "529480" },
-  //{ name: "Jack Smith", bc: "40747" },
-  //{ name: "Daniel Magrizos", bc: "925710" },
-  //{ name: "Seamus Mcalister", bc: "750617" },
-  //{ name: "Ben Weaterton", bc: "1149921" },
-  //{ name: "Thomas Houghton", bc: "57471" },
-  //{ name: "Jash Hutheesing", bc: "1040818" },
+  { name: "Cesare Masset", bc: "1148505" },
+  { name: "John Tindell", bc: "529480" },
+  { name: "Jack Smith", bc: "40747" },
+  { name: "Daniel Magrizos", bc: "925710" },
+  { name: "Seamus Mcalister", bc: "750617" },
+  { name: "Ben Weaterton", bc: "1149921" },
+  { name: "Thomas Houghton", bc: "57471" },
+  { name: "Jash Hutheesing", bc: "1040818" },
   { name: "Karla Boddy", bc: "133044" },
-  //{ name: "Ernesto Battinelli", bc: "746844" },
-  //{ name: "Russell Bickle", bc: "442746" },
-  //{ name: "Mark Day", bc: "651560" },
+  { name: "Ernesto Battinelli", bc: "746844" },
+  { name: "Russell Bickle", bc: "442746" },
+  { name: "Mark Day", bc: "651560" },
 ];
 
 async function fetchRaceData(personId, year) {
