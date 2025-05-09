@@ -1,51 +1,27 @@
 import React, { useState } from "react";
 
 const racers = [
-  { name: "Marek Shafer", bc: "670931" },
-  { name: "Alwyn Frank", bc: "482041" },
+  //{ name: "Marek Shafer", bc: "670931" },
+  //{ name: "Alwyn Frank", bc: "482041" },
   { name: "Nathan Cozens", bc: "987321" },
-  { name: "Cesare Masset", bc: "1148505" },
-  { name: "John Tindell", bc: "529480" },
-  { name: "Jack Smith", bc: "40747" },
-  { name: "Daniel Magrizos", bc: "925710" },
-  { name: "Seamus Mcalister", bc: "750617" },
-  { name: "Ben Weaterton", bc: "1149921" },
-  { name: "Thomas Houghton", bc: "57471" },
-  { name: "Jash Hutheesing", bc: "1040818" },
+  //{ name: "Cesare Masset", bc: "1148505" },
+  //{ name: "John Tindell", bc: "529480" },
+  //{ name: "Jack Smith", bc: "40747" },
+  //{ name: "Daniel Magrizos", bc: "925710" },
+  //{ name: "Seamus Mcalister", bc: "750617" },
+  //{ name: "Ben Weaterton", bc: "1149921" },
+  //{ name: "Thomas Houghton", bc: "57471" },
+  //{ name: "Jash Hutheesing", bc: "1040818" },
   { name: "Karla Boddy", bc: "133044" },
-  { name: "Ernesto Battinelli", bc: "746844" },
-  { name: "Russell Bickle", bc: "442746" },
-  { name: "Mark Day", bc: "651560" },
+  //{ name: "Ernesto Battinelli", bc: "746844" },
+  //{ name: "Russell Bickle", bc: "442746" },
+  //{ name: "Mark Day", bc: "651560" },
 ];
 
 async function fetchRaceData(personId, year) {
-  const url = `http://localhost:3001/api/race-data?person_id=${personId}&year=${year}`;
+  const url = `http://localhost:3000/api/race-data?person_id=${personId}&year=${year}`;
   const response = await fetch(url);
-  const text = await response.text();
-
-  const tbodyStart = text.indexOf("<tbody>");
-  const tbodyEnd = text.indexOf("</tbody>");
-  let raceCount = 0;
-  if (tbodyStart !== -1 && tbodyEnd !== -1) {
-    const tbody = text.slice(tbodyStart, tbodyEnd);
-    raceCount = [...tbody.matchAll(/<tr>/g)].length;
-  }
-
-  const tfootStart = text.indexOf("<tfoot>");
-  let points = "Not found";
-  if (tfootStart !== -1) {
-    let pos = text.indexOf("<td>", tfootStart);
-    for (let i = 0; i < 4 && pos !== -1; i++) {
-      pos = text.indexOf("<td>", pos + 1);
-    }
-    if (pos !== -1) {
-      const start = pos + 4;
-      const end = text.indexOf("</td>", start);
-      points = text.slice(start, end).trim();
-    }
-  }
-
-  return { raceCount, points: isNaN(Number(points)) ? 0 : Number(points) };
+  return await response.json();
 }
 
 export default function RaceChecker() {
@@ -60,6 +36,7 @@ export default function RaceChecker() {
     const newData = {};
     for (const racer of racers) {
       newData[racer.bc] = await fetchRaceData(racer.bc, year);
+      console.log(racer.bc, newData[racer.bc])
     }
     setData(newData);
     setLoading(false);
