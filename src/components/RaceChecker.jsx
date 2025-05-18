@@ -1,33 +1,6 @@
 import React, { useState, useEffect } from "react";
 import LoadingOverlay from "react-loading-overlay-ts";
 
-const racers = [
-  { name: "Marek Shafer", bc: "670931", club: "Brighton Mitre CC" },
-  { name: "Alwyn Frank", bc: "482041", club: "Brighton Mitre CC" },
-  { name: "Nathan Cozens", bc: "987321", club: "Brighton Mitre CC" },
-  { name: "Cesare Masset", bc: "1148505", club: "Brighton Mitre CC" },
-  { name: "John Tindell", bc: "529480", club: "Brighton Mitre CC" },
-  { name: "Jack Smith", bc: "40747", club: "Brighton Mitre CC" },
-  { name: "Daniel Magrizos", bc: "925710", club: "Brighton Mitre CC" },
-  { name: "Seamus Mcalister", bc: "750617", club: "Brighton Mitre CC" },
-  { name: "Ben Weaterton", bc: "1149921", club: "Brighton Mitre CC" },
-  { name: "Thomas Houghton", bc: "57471", club: "Brighton Mitre CC" },
-  { name: "Jash Hutheesing", bc: "1040818", club: "Brighton Mitre CC" },
-  { name: "Karla Boddy", bc: "133044", club: "Brighton Mitre CC" },
-  { name: "Ernesto Battinelli", bc: "746844", club: "Brighton Mitre CC" },
-  { name: "Russell Bickle", bc: "442746", club: "Brighton Mitre CC" },
-  { name: "Mark Day", bc: "651560", club: "Brighton Mitre CC" },
-  { name: "Richard Mount", bc: "335910", club: "Sussex Revolution Velo Club" }
-];
-
-async function fetchRaceData(personId, year) {
-  // Use environment variable in production or default to current origin or localhost
-  const apiBase = import.meta.env.VITE_API_BASE_URL || window.location.origin || 'http://localhost:3000';
-  const url = `${apiBase}/api/race-data?person_id=${personId}&year=${year}`;
-  const response = await fetch(url);
-  return await response.json();
-}
-
 // Parse URL query parameters
 function getQueryParams() {
   const params = new URLSearchParams(window.location.search);
@@ -62,21 +35,33 @@ export default function RaceChecker() {
   const queryParams = getQueryParams();
   const [year, setYear] = useState(queryParams.year);
   const [data, setData] = useState({});
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [sortKey, setSortKey] = useState(queryParams.sort);
   const [filterText, setFilterText] = useState(queryParams.filter);
   const [clubFilter, setClubFilter] = useState(queryParams.club);
   const [raceTypeFilter, setRaceTypeFilter] = useState(queryParams.raceType);
+  const [uniqueClubs, setUniqueClubs] = useState([]);
 
-  const handleCheckAll = async () => {
+  const fetchRaceData = async () => {
     setLoading(true);
-    const newData = {};
-    for (const racer of racers) {
-      newData[racer.bc] = await fetchRaceData(racer.bc, year);
-      console.log(racer.bc, newData[racer.bc])
+    try {
+      // Use environment variable in production or default to current origin or localhost
+      const apiBase = import.meta.env.VITE_API_BASE_URL || window.location.origin || 'http://localhost:3000';
+      const url = `${apiBase}/api/all-race-data?year=${year}`;
+      const response = await fetch(url);
+      const allData = await response.json();
+      
+      console.log("Fetched race data:", allData);
+      setData(allData);
+      
+      // Extract unique clubs from the data
+      const clubs = new Set(Object.values(allData).map(racer => racer.club));
+      setUniqueClubs([...clubs]);
+    } catch (error) {
+      console.error("Error fetching race data:", error);
+    } finally {
+      setLoading(false);
     }
-    setData(newData);
-    setLoading(false);
   };
   
   const handleClearFilters = () => {
@@ -91,35 +76,34 @@ export default function RaceChecker() {
     updateQueryParams({ year, sort: sortKey, filter: filterText, club: clubFilter, raceType: raceTypeFilter });
   }, [year, sortKey, filterText, clubFilter, raceTypeFilter]);
   
+  // Fetch data when year changes
   useEffect(() => {
-    handleCheckAll();
+    fetchRaceData();
   }, [year]);
 
-  // Get unique clubs for the dropdown
-  const uniqueClubs = [...new Set(racers.map(racer => racer.club))];
-
-  const sortedFilteredRacers = [...racers]
-    .filter(r => r.name.toLowerCase().includes(filterText.toLowerCase()))
-    .filter(r => clubFilter === "" || r.club === clubFilter)
-    .filter(r => {
-      // Hide cards with no races of the selected type
-      if (!data[r.bc]) return false;
+  // Process and filter the data
+  const racerEntries = Object.entries(data);
+  const sortedFilteredRacers = racerEntries
+    .filter(([_, racer]) => racer.name.toLowerCase().includes(filterText.toLowerCase()))
+    .filter(([_, racer]) => clubFilter === "" || racer.club === clubFilter)
+    .filter(([_, racer]) => {
       if (raceTypeFilter === "all") return true;
-      if (raceTypeFilter === "roadAndTrack" && data[r.bc]?.roadAndTrackRaceCount > 0) return true;
-      if (raceTypeFilter === "cyclocross" && data[r.bc]?.cyclocrossRaceCount > 0) return true;
+      if (raceTypeFilter === "roadAndTrack" && racer.roadAndTrackRaceCount > 0) return true;
+      if (raceTypeFilter === "cyclocross" && racer.cyclocrossRaceCount > 0) return true;
       return false;
     })
     .sort((a, b) => {
-      const aData = data[a.bc];
-      const bData = data[b.bc];
+      const [_, aData] = a;
+      const [__, bData] = b;
+      
       if (sortKey === "name") {
-        return a.name.localeCompare(b.name);
+        return aData.name.localeCompare(bData.name);
       } else if (sortKey === "races") {
-        return (bData?.raceCount || 0) - (aData?.raceCount || 0);
+        return (bData.raceCount || 0) - (aData.raceCount || 0);
       } else if (sortKey === "roadAndTrack") {
-        return (bData?.roadAndTrackPoints || 0) - (aData?.roadAndTrackPoints || 0);
+        return (bData.roadAndTrackPoints || 0) - (aData.roadAndTrackPoints || 0);
       } else if (sortKey === "cyclocross") {
-        return (bData?.cyclocrossPoints || 0) - (aData?.cyclocrossPoints || 0);
+        return (bData.cyclocrossPoints || 0) - (aData.cyclocrossPoints || 0);
       }
       return 0;
     });
@@ -171,7 +155,7 @@ export default function RaceChecker() {
               })}
             </select>
             <button
-              onClick={handleCheckAll}
+              onClick={fetchRaceData}
               disabled={loading}
               className="bg-blue-600 text-white px-1 py-1 rounded text-xs ml-1"
             >
@@ -243,51 +227,51 @@ export default function RaceChecker() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {sortedFilteredRacers.map((racer, idx) => (
-          <div key={idx} className="rounded-2xl shadow-md border p-4 space-y-2 bg-white">
+        {sortedFilteredRacers.map(([racerId, racer]) => (
+          <div key={racerId} className="rounded-2xl shadow-md border p-4 space-y-2 bg-white">
             <div className="text-xl font-semibold">{racer.name}</div>
-            <div className="text-sm text-gray-500">BC No: {racer.bc}</div>
+            <div className="text-sm text-gray-500">BC No: {racerId}</div>
             <div className="text-sm text-gray-500">Club: {racer.club}</div>
             <div className="space-y-2">
               <div className="flex gap-2 items-center flex-wrap">
-                {data[racer.bc] && (raceTypeFilter === "all") && (
+                {(raceTypeFilter === "all") && (
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    Total Races: {data[racer.bc].raceCount}
+                    Total Races: {racer.raceCount}
                   </span>
                 )}
-                {data[racer.bc]?.roadAndTrackRaceCount > 0 && (raceTypeFilter === "all" || raceTypeFilter === "roadAndTrack") && (
+                {racer.roadAndTrackRaceCount > 0 && (raceTypeFilter === "all" || raceTypeFilter === "roadAndTrack") && (
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    Road & Track: {data[racer.bc].roadAndTrackRaceCount} races
+                    Road & Track: {racer.roadAndTrackRaceCount} races
                   </span>
                 )}
-                {data[racer.bc]?.cyclocrossRaceCount > 0 && (raceTypeFilter === "all" || raceTypeFilter === "cyclocross") && (
+                {racer.cyclocrossRaceCount > 0 && (raceTypeFilter === "all" || raceTypeFilter === "cyclocross") && (
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                    Cyclocross: {data[racer.bc].cyclocrossRaceCount} races
+                    Cyclocross: {racer.cyclocrossRaceCount} races
                   </span>
                 )}
               </div>
               <div className="flex gap-2 items-center flex-wrap">
-                {data[racer.bc]?.roadAndTrackPoints > 0 && (raceTypeFilter === "all" || raceTypeFilter === "roadAndTrack") && (
+                {racer.roadAndTrackPoints > 0 && (raceTypeFilter === "all" || raceTypeFilter === "roadAndTrack") && (
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    Road & Track: {data[racer.bc].roadAndTrackPoints} pts
+                    Road & Track: {racer.roadAndTrackPoints} pts
                   </span>
                 )}
-                {data[racer.bc]?.cyclocrossPoints > 0 && (raceTypeFilter === "all" || raceTypeFilter === "cyclocross") && (
+                {racer.cyclocrossPoints > 0 && (raceTypeFilter === "all" || raceTypeFilter === "cyclocross") && (
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                    Cyclocross: {data[racer.bc].cyclocrossPoints} pts
+                    Cyclocross: {racer.cyclocrossPoints} pts
                   </span>
                 )}
               </div>
             </div>
             <div className="flex gap-2">
               <button
-                onClick={() => window.open(`https://www.britishcycling.org.uk/points?d=4&person_id=${racer.bc}&year=${year}`, "_blank")}
+                onClick={() => window.open(`https://www.britishcycling.org.uk/points?d=4&person_id=${racerId}&year=${year}`, "_blank")}
                 className="bg-gray-200 px-3 py-1 rounded text-xs"
               >
                 Road Results
               </button>
               <button
-                onClick={() => window.open(`https://www.britishcycling.org.uk/points?d=6&person_id=${racer.bc}&year=${year}`, "_blank")}
+                onClick={() => window.open(`https://www.britishcycling.org.uk/points?d=6&person_id=${racerId}&year=${year}`, "_blank")}
                 className="bg-gray-200 px-3 py-1 rounded text-xs"
               >
                 CX Results
