@@ -1,27 +1,28 @@
 # ---------- Stage 1: Build React App ----------
-    FROM node:18 AS builder
+FROM node:18 AS builder
 
-    WORKDIR /app
+WORKDIR /app
     
-    COPY package.json package-lock.json* ./
-    RUN npm install
+COPY package.json package-lock.json* ./
+# Install all dependencies including devDependencies
+RUN npm install
     
-    COPY . .
-    RUN npm run build
+COPY . .
+# Use npx to ensure vite is found in the path
+RUN npx vite build
     
-    # ---------- Stage 2: Serve with Express ----------
-    FROM node:18
+# ---------- Stage 2: Serve with Express ----------
+FROM node:18
     
-    WORKDIR /app
+WORKDIR /app
     
-    COPY package.json package-lock.json* ./
-    RUN npm install --omit=dev
+COPY package.json package-lock.json* ./
+RUN npm install --omit=dev
     
-    # Copy built React app
-    COPY --from=builder /app/dist ./client
-    COPY server.js .
+# Copy built React app
+COPY --from=builder /app/dist ./client
+COPY server.js .
     
-    EXPOSE 3000
+EXPOSE 3000
     
-    CMD ["node", "server.js"]
-    
+CMD ["node", "server.js"]
