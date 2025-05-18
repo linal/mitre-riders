@@ -10,7 +10,8 @@ function getQueryParams() {
     sort: params.get("sort") || "name",
     filter: params.get("filter") || "",
     club: params.get("club") || "",
-    raceType: params.get("raceType") || "all"
+    raceType: params.get("raceType") || "all",
+    category: params.get("category") || ""
   };
 }
 
@@ -27,6 +28,7 @@ function updateQueryParams(params) {
   if (params.filter) url.searchParams.set("filter", params.filter);
   if (params.club) url.searchParams.set("club", params.club);
   if (params.raceType !== "all") url.searchParams.set("raceType", params.raceType);
+  if (params.category) url.searchParams.set("category", params.category);
   
   // Update URL without reloading page
   window.history.replaceState({}, "", url);
@@ -42,7 +44,9 @@ export default function RaceChecker() {
   const [filterText, setFilterText] = useState(queryParams.filter);
   const [clubFilter, setClubFilter] = useState(queryParams.club);
   const [raceTypeFilter, setRaceTypeFilter] = useState(queryParams.raceType);
+  const [categoryFilter, setCategoryFilter] = useState(queryParams.category);
   const [uniqueClubs, setUniqueClubs] = useState([]);
+  const [uniqueCategories, setUniqueCategories] = useState([]);
 
   const fetchRaceData = async () => {
     setLoading(true);
@@ -59,6 +63,14 @@ export default function RaceChecker() {
       // Extract unique clubs from the data and sort alphabetically
       const clubs = new Set(Object.values(allData).map(racer => racer.club));
       setUniqueClubs([...clubs].sort());
+      
+      // Extract unique categories from the data and sort alphabetically
+      const categories = new Set(
+        Object.values(allData)
+          .filter(racer => racer.category)
+          .map(racer => racer.category)
+      );
+      setUniqueCategories([...categories].sort());
     } catch (error) {
       console.error("Error fetching race data:", error);
     } finally {
@@ -69,14 +81,15 @@ export default function RaceChecker() {
   const handleClearFilters = () => {
     setFilterText("");
     setClubFilter("");
+    setCategoryFilter("");
     setRaceTypeFilter("all");
     setSortKey("name");
   };
   
   // Update URL when filters change
   useEffect(() => {
-    updateQueryParams({ year, sort: sortKey, filter: filterText, club: clubFilter, raceType: raceTypeFilter });
-  }, [year, sortKey, filterText, clubFilter, raceTypeFilter]);
+    updateQueryParams({ year, sort: sortKey, filter: filterText, club: clubFilter, raceType: raceTypeFilter, category: categoryFilter });
+  }, [year, sortKey, filterText, clubFilter, raceTypeFilter, categoryFilter]);
   
   // Fetch data when year changes
   useEffect(() => {
@@ -88,6 +101,15 @@ export default function RaceChecker() {
   const sortedFilteredRacers = racerEntries
     .filter(([_, racer]) => racer.name.toLowerCase().includes(filterText.toLowerCase()))
     .filter(([_, racer]) => clubFilter === "" || racer.club === clubFilter)
+    .filter(([_, racer]) => {
+      if (categoryFilter === "") return true;
+      if (categoryFilter === "unlicensed") return !racer.category;
+      if (categoryFilter === "1st") return racer.category && racer.category.includes("1st");
+      if (categoryFilter === "2nd") return racer.category && racer.category.includes("2nd");
+      if (categoryFilter === "3rd") return racer.category && racer.category.includes("3rd");
+      if (categoryFilter === "4th") return racer.category && racer.category.includes("4th");
+      return racer.category === categoryFilter;
+    })
     .filter(([_, racer]) => {
       if (raceTypeFilter === "all") return true;
       if (raceTypeFilter === "roadAndTrack" && racer.roadAndTrackRaceCount > 0) return true;
@@ -106,6 +128,12 @@ export default function RaceChecker() {
         return (bData.roadAndTrackPoints || 0) - (aData.roadAndTrackPoints || 0);
       } else if (sortKey === "cyclocross") {
         return (bData.cyclocrossPoints || 0) - (aData.cyclocrossPoints || 0);
+      } else if (sortKey === "category") {
+        // If one rider has a category and the other doesn't, the one with category comes first
+        if (aData.category && !bData.category) return -1;
+        if (!aData.category && bData.category) return 1;
+        // If both have categories or both don't, sort alphabetically
+        return (aData.category || "").localeCompare(bData.category || "");
       }
       return 0;
     });
@@ -193,6 +221,7 @@ export default function RaceChecker() {
             <option value="races">Race Count</option>
             <option value="roadAndTrack">Road & Track Pts</option>
             <option value="cyclocross">Cyclocross Pts</option>
+            <option value="category">Category</option>
           </select>
         </div>
         
@@ -235,6 +264,25 @@ export default function RaceChecker() {
         </div>
         
         <div className="flex items-center">
+          <label className={`text-sm mr-1 w-10 ${darkMode ? 'text-gray-300' : ''}`}>Cat:</label>
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className={`border rounded px-1 py-1 text-sm flex-1 ${darkMode ? 'bg-gray-700 text-white border-gray-600' : ''}`}
+          >
+            <option value="">All</option>
+            <option value="1st">1st</option>
+            <option value="2nd">2nd</option>
+            <option value="3rd">3rd</option>
+            <option value="4th">4th</option>
+            {uniqueCategories.map(category => (
+              <option key={category} value={category}>{category}</option>
+            ))}
+            <option value="unlicensed">Unlicensed</option>
+          </select>
+        </div>
+        
+        <div className="flex items-center">
           <button
             onClick={handleClearFilters}
             className={`px-3 py-1 rounded text-xs ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
@@ -250,6 +298,11 @@ export default function RaceChecker() {
             <div className={`text-xl font-semibold ${darkMode ? 'text-white' : ''}`}>{racer.name}</div>
             <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>BC No: {racerId}</div>
             <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Club: {racer.club}</div>
+            {racer.category && (
+              <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                Category: <span className="font-medium">{racer.category}</span>
+              </div>
+            )}
             <div className="space-y-2">
               <div className="flex gap-2 items-center flex-wrap">
                 {(raceTypeFilter === "all") && (
