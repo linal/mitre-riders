@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import LoadingOverlay from "react-loading-overlay-ts";
 
 const racers = [
   { name: "Marek Shafer", bc: "670931", club: "Brighton Mitre CC" },
@@ -72,7 +73,28 @@ export default function RaceChecker() {
     });
 
   return (
-    <div className="p-4 space-y-4">
+    <LoadingOverlay
+      active={loading}
+      spinner
+      text="Loading race data..."
+      styles={{
+        overlay: (base) => ({
+          ...base,
+          background: 'rgba(0, 0, 0, 0.7)',
+          backdropFilter: 'blur(4px)',
+          position: 'fixed',
+          zIndex: 9999
+        }),
+        content: (base) => ({
+          ...base,
+          color: '#fff',
+          fontSize: '1.25rem',
+          fontWeight: 500
+        })
+      }}
+    >
+      <div className="p-4 space-y-4">
+      
       <div className="block md:flex md:flex-row md:items-center md:space-x-4 space-y-2 md:space-y-0 mb-4">
         <div className="flex items-center">
           <label className="text-sm mr-1 w-10">Year:</label>
@@ -191,6 +213,7 @@ export default function RaceChecker() {
           </div>
         ))}
       </div>
-    </div>
+      </div>
+    </LoadingOverlay>
   );
 }
