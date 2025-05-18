@@ -28,13 +28,42 @@ async function fetchRaceData(personId, year) {
   return await response.json();
 }
 
+// Parse URL query parameters
+function getQueryParams() {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    year: params.get("year") || "2025",
+    sort: params.get("sort") || "name",
+    filter: params.get("filter") || "",
+    club: params.get("club") || ""
+  };
+}
+
+// Update URL with current filter state
+function updateQueryParams(params) {
+  const url = new URL(window.location);
+  
+  // Clear existing params
+  url.search = "";
+  
+  // Add non-default params
+  if (params.year !== "2025") url.searchParams.set("year", params.year);
+  if (params.sort !== "name") url.searchParams.set("sort", params.sort);
+  if (params.filter) url.searchParams.set("filter", params.filter);
+  if (params.club) url.searchParams.set("club", params.club);
+  
+  // Update URL without reloading page
+  window.history.replaceState({}, "", url);
+}
+
 export default function RaceChecker() {
-  const [year, setYear] = useState("2025");
+  const queryParams = getQueryParams();
+  const [year, setYear] = useState(queryParams.year);
   const [data, setData] = useState({});
   const [loading, setLoading] = useState(false);
-  const [sortKey, setSortKey] = useState("name");
-  const [filterText, setFilterText] = useState("");
-  const [clubFilter, setClubFilter] = useState("");
+  const [sortKey, setSortKey] = useState(queryParams.sort);
+  const [filterText, setFilterText] = useState(queryParams.filter);
+  const [clubFilter, setClubFilter] = useState(queryParams.club);
 
   const handleCheckAll = async () => {
     setLoading(true);
@@ -47,9 +76,14 @@ export default function RaceChecker() {
     setLoading(false);
   };
   
+  // Update URL when filters change
+  useEffect(() => {
+    updateQueryParams({ year, sort: sortKey, filter: filterText, club: clubFilter });
+  }, [year, sortKey, filterText, clubFilter]);
+  
   useEffect(() => {
     handleCheckAll();
-  }, []);
+  }, [year]);
 
   // Get unique clubs for the dropdown
   const uniqueClubs = [...new Set(racers.map(racer => racer.club))];
