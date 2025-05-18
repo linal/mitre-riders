@@ -56,9 +56,9 @@ export default function RaceChecker() {
       console.log("Fetched race data:", allData);
       setData(allData);
       
-      // Extract unique clubs from the data
+      // Extract unique clubs from the data and sort alphabetically
       const clubs = new Set(Object.values(allData).map(racer => racer.club));
-      setUniqueClubs([...clubs]);
+      setUniqueClubs([...clubs].sort());
     } catch (error) {
       console.error("Error fetching race data:", error);
     } finally {
