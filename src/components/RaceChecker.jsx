@@ -176,8 +176,8 @@ export default function RaceChecker() {
           >
             <option value="name">Name</option>
             <option value="races">Race Count</option>
-            <option value="roadAndTrack">Road Pts</option>
-            <option value="cyclocross">CX Pts</option>
+            <option value="roadAndTrack">Road & Track Pts</option>
+            <option value="cyclocross">Cyclocross Pts</option>
           </select>
         </div>
         
