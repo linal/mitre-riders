@@ -79,6 +79,13 @@ export default function RaceChecker() {
     setLoading(false);
   };
   
+  const handleClearFilters = () => {
+    setFilterText("");
+    setClubFilter("");
+    setRaceTypeFilter("all");
+    setSortKey("name");
+  };
+  
   // Update URL when filters change
   useEffect(() => {
     updateQueryParams({ year, sort: sortKey, filter: filterText, club: clubFilter, raceType: raceTypeFilter });
@@ -223,6 +230,15 @@ export default function RaceChecker() {
             <option value="roadAndTrack">Road & Track</option>
             <option value="cyclocross">Cyclocross</option>
           </select>
+        </div>
+        
+        <div className="flex items-center">
+          <button
+            onClick={handleClearFilters}
+            className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded text-xs"
+          >
+            Clear Filters
+          </button>
         </div>
       </div>
 
