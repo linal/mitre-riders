@@ -1,21 +1,22 @@
 import React, { useState } from "react";
 
 const racers = [
-  { name: "Marek Shafer", bc: "670931" },
-  { name: "Alwyn Frank", bc: "482041" },
-  { name: "Nathan Cozens", bc: "987321" },
-  { name: "Cesare Masset", bc: "1148505" },
-  { name: "John Tindell", bc: "529480" },
-  { name: "Jack Smith", bc: "40747" },
-  { name: "Daniel Magrizos", bc: "925710" },
-  { name: "Seamus Mcalister", bc: "750617" },
-  { name: "Ben Weaterton", bc: "1149921" },
-  { name: "Thomas Houghton", bc: "57471" },
-  { name: "Jash Hutheesing", bc: "1040818" },
-  { name: "Karla Boddy", bc: "133044" },
-  { name: "Ernesto Battinelli", bc: "746844" },
-  { name: "Russell Bickle", bc: "442746" },
-  { name: "Mark Day", bc: "651560" },
+  { name: "Marek Shafer", bc: "670931", club: "Brighton Mitre CC" },
+  { name: "Alwyn Frank", bc: "482041", club: "Brighton Mitre CC" },
+  { name: "Nathan Cozens", bc: "987321", club: "Brighton Mitre CC" },
+  { name: "Cesare Masset", bc: "1148505", club: "Brighton Mitre CC" },
+  { name: "John Tindell", bc: "529480", club: "Brighton Mitre CC" },
+  { name: "Jack Smith", bc: "40747", club: "Brighton Mitre CC" },
+  { name: "Daniel Magrizos", bc: "925710", club: "Brighton Mitre CC" },
+  { name: "Seamus Mcalister", bc: "750617", club: "Brighton Mitre CC" },
+  { name: "Ben Weaterton", bc: "1149921", club: "Brighton Mitre CC" },
+  { name: "Thomas Houghton", bc: "57471", club: "Brighton Mitre CC" },
+  { name: "Jash Hutheesing", bc: "1040818", club: "Brighton Mitre CC" },
+  { name: "Karla Boddy", bc: "133044", club: "Brighton Mitre CC" },
+  { name: "Ernesto Battinelli", bc: "746844", club: "Brighton Mitre CC" },
+  { name: "Russell Bickle", bc: "442746", club: "Brighton Mitre CC" },
+  { name: "Mark Day", bc: "651560", club: "Brighton Mitre CC" },
+  { name: "Richard Mount", bc: "335910", club: "Sussex Revolution Velo Club" }
 ];
 
 async function fetchRaceData(personId, year) {
@@ -31,6 +32,7 @@ export default function RaceChecker() {
   const [loading, setLoading] = useState(false);
   const [sortKey, setSortKey] = useState("name");
   const [filterText, setFilterText] = useState("");
+  const [clubFilter, setClubFilter] = useState("");
 
   const handleCheckAll = async () => {
     setLoading(true);
@@ -43,8 +45,12 @@ export default function RaceChecker() {
     setLoading(false);
   };
 
+  // Get unique clubs for the dropdown
+  const uniqueClubs = [...new Set(racers.map(racer => racer.club))];
+
   const sortedFilteredRacers = [...racers]
     .filter(r => r.name.toLowerCase().includes(filterText.toLowerCase()))
+    .filter(r => clubFilter === "" || r.club === clubFilter)
     .sort((a, b) => {
       const aData = data[a.bc];
       const bData = data[b.bc];
@@ -63,16 +69,16 @@ export default function RaceChecker() {
       <div className="flex flex-wrap items-center gap-4">
         <div className="flex items-center gap-2">
           <label>Year:</label>
-<select
-  value={year}
-  onChange={(e) => setYear(e.target.value)}
-  className="border rounded px-2 py-1"
->
-  {[...Array(10)].map((_, i) => {
-    const y = 2025 - i;
-    return <option key={y} value={y}>{y}</option>;
-  })}
-</select>
+          <select
+            value={year}
+            onChange={(e) => setYear(e.target.value)}
+            className="border rounded px-2 py-1"
+          >
+            {[...Array(10)].map((_, i) => {
+              const y = 2025 - i;
+              return <option key={y} value={y}>{y}</option>;
+            })}
+          </select>
           <button
             onClick={handleCheckAll}
             disabled={loading}
@@ -103,6 +109,19 @@ export default function RaceChecker() {
             className="border px-2 py-1 rounded"
           />
         </div>
+        <div className="flex items-center gap-2">
+          <label>Club:</label>
+          <select
+            value={clubFilter}
+            onChange={(e) => setClubFilter(e.target.value)}
+            className="border rounded px-2 py-1"
+          >
+            <option value="">All Clubs</option>
+            {uniqueClubs.map(club => (
+              <option key={club} value={club}>{club}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -110,6 +129,7 @@ export default function RaceChecker() {
           <div key={idx} className="rounded-2xl shadow-md border p-4 space-y-2 bg-white">
             <div className="text-xl font-semibold">{racer.name}</div>
             <div className="text-sm text-gray-500">BC No: {racer.bc}</div>
+            <div className="text-sm text-gray-500">Club: {racer.club}</div>
             <div className="text-sm text-blue-700">
               {data[racer.bc] ? `Races: ${data[racer.bc].raceCount}` : "Not checked"}
             </div>
