@@ -2,7 +2,7 @@
   "name": "bc-race-points-spa",
   "version": "1.0.0",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --force",
     "build": "vite build",
     "preview": "vite preview",
     "start-server": "nodemon server.js",
@@ -20,7 +20,10 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^3.0.0",
+    "autoprefixer": "^10.4.14",
     "nodemon": "^3.0.1",
+    "postcss": "^8.4.24",
+    "tailwindcss": "^3.3.2",
     "vite": "^4.0.0"
   }
 }

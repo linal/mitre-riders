@@ -46,7 +46,7 @@ export default function RaceChecker() {
     setLoading(true);
     try {
       // Use environment variable in production or default to current origin or localhost
-      const apiBase = import.meta.env.VITE_API_BASE_URL || window.location.origin || 'http://localhost:3000';
+      const apiBase = import.meta.env.VITE_API_BASE_URL || window.location.origin || 'http://localhost:3001';
       const url = `${apiBase}/api/all-race-data?year=${year}`;
       const response = await fetch(url);
       const allData = await response.json();
