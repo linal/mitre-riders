@@ -25,4 +25,7 @@ COPY server.js .
     
 EXPOSE 3000
     
+# Use environment variable for API URL, defaulting to the container's own address
+ENV VITE_API_BASE_URL=
+    
 CMD ["node", "server.js"]

@@ -20,7 +20,8 @@ const racers = [
 ];
 
 async function fetchRaceData(personId, year) {
-  const apiBase = import.meta.env?.VITE_API_URL || 'http://localhost:3000';
+  // Use environment variable in production or default to current origin or localhost
+  const apiBase = import.meta.env.VITE_API_BASE_URL || window.location.origin || 'http://localhost:3000';
   const url = `${apiBase}/api/race-data?person_id=${personId}&year=${year}`;
   const response = await fetch(url);
   return await response.json();
