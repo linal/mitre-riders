@@ -73,58 +73,63 @@ export default function RaceChecker() {
 
   return (
     <div className="p-4 space-y-4">
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-2">
-          <label>Year:</label>
-          <select
-            value={year}
-            onChange={(e) => setYear(e.target.value)}
-            className="border rounded px-2 py-1"
-          >
-            {[...Array(10)].map((_, i) => {
-              const y = 2025 - i;
-              return <option key={y} value={y}>{y}</option>;
-            })}
-          </select>
-          <button
-            onClick={handleCheckAll}
-            disabled={loading}
-            className="bg-blue-600 text-white px-3 py-1 rounded"
-          >
-            {loading ? "Checking..." : "Check Race Data"}
-          </button>
+      <div className="block md:flex md:flex-row md:items-center md:space-x-4 space-y-2 md:space-y-0 mb-4">
+        <div className="flex items-center">
+          <label className="text-sm mr-1 w-10">Year:</label>
+          <div className="flex flex-1">
+            <select
+              value={year}
+              onChange={(e) => setYear(e.target.value)}
+              className="border rounded px-1 py-1 text-sm"
+            >
+              {[...Array(10)].map((_, i) => {
+                const y = 2025 - i;
+                return <option key={y} value={y}>{y}</option>;
+              })}
+            </select>
+            <button
+              onClick={handleCheckAll}
+              disabled={loading}
+              className="bg-blue-600 text-white px-1 py-1 rounded text-xs ml-1"
+            >
+              {loading ? "..." : "Go"}
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <label>Sort by:</label>
+        
+        <div className="flex items-center">
+          <label className="text-sm mr-1 w-10">Sort:</label>
           <select
             value={sortKey}
             onChange={(e) => setSortKey(e.target.value)}
-            className="border rounded px-2 py-1"
+            className="border rounded px-1 py-1 text-sm flex-1"
           >
             <option value="name">Name</option>
-            <option value="races">Race Count</option>
-            <option value="roadAndTrack">Road & Track</option>
-            <option value="cyclocross">Cyclocross</option>
+            <option value="races">Races</option>
+            <option value="roadAndTrack">Road</option>
+            <option value="cyclocross">CX</option>
           </select>
         </div>
-        <div className="flex items-center gap-2">
-          <label>Filter:</label>
+        
+        <div className="flex items-center">
+          <label className="text-sm mr-1 w-10">Find:</label>
           <input
             type="text"
             value={filterText}
             onChange={(e) => setFilterText(e.target.value)}
-            placeholder="Search names..."
-            className="border px-2 py-1 rounded"
+            placeholder="Name..."
+            className="border px-1 py-1 rounded text-sm flex-1"
           />
         </div>
-        <div className="flex items-center gap-2">
-          <label>Club:</label>
+        
+        <div className="flex items-center">
+          <label className="text-sm mr-1 w-10">Club:</label>
           <select
             value={clubFilter}
             onChange={(e) => setClubFilter(e.target.value)}
-            className="border rounded px-2 py-1"
+            className="border rounded px-1 py-1 text-sm flex-1"
           >
-            <option value="">All Clubs</option>
+            <option value="">All</option>
             {uniqueClubs.map(club => (
               <option key={club} value={club}>{club}</option>
             ))}
