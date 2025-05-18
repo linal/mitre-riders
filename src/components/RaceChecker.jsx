@@ -139,6 +139,7 @@ export default function RaceChecker() {
           Data is cached for 24 hours to improve performance. The server filters out duplicate race entries by extracting 
           unique event IDs from the HTML response, ensuring each race is only counted once even if a rider participated in 
           multiple events within the same race.
+          <br /><strong>Note: All data is pulled directly from the British Cycling website, so any inaccuracies there will be reflected here.</strong>
         </p>
       </div>
       
