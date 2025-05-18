@@ -174,9 +174,9 @@ export default function RaceChecker() {
             className="border rounded px-1 py-1 text-sm flex-1"
           >
             <option value="name">Name</option>
-            <option value="races">Races</option>
-            <option value="roadAndTrack">Road</option>
-            <option value="cyclocross">CX</option>
+            <option value="races">Race Count</option>
+            <option value="roadAndTrack">Road Pts</option>
+            <option value="cyclocross">CX Pts</option>
           </select>
         </div>
         
