@@ -105,7 +105,9 @@ app.get('/api/race-data', async (req, res) => {
       raceCount: regularRaceCount + cyclocrossRaceCount, 
       points: regularPoints + cyclocrossPoints,
       roadAndTrackPoints: regularPoints,
-      cyclocrossPoints
+      cyclocrossPoints,
+      roadAndTrackRaceCount: regularRaceCount,
+      cyclocrossRaceCount
     };
     
     cache[cacheKey] = { data: result, timestamp: now };
