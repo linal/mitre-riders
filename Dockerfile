@@ -27,5 +27,7 @@ EXPOSE 3000
     
 # Use environment variable for API URL, defaulting to the container's own address
 ENV VITE_API_BASE_URL=
+# Set production environment for 24-hour caching
+ENV NODE_ENV=production
     
 CMD ["node", "server.js"]

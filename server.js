@@ -12,7 +12,9 @@ app.use(express.static(path.join(__dirname, 'client')));
 
 // Simple in-memory cache
 const cache = {};
-const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const CACHE_TTL_MS = process.env.NODE_ENV === 'production' 
+  ? 24 * 60 * 60 * 1000  // 24 hours in production
+  : 10 * 60 * 1000;      // 10 minutes in development
 
 app.get('/api/race-data', async (req, res) => {
   const { person_id, year } = req.query;
