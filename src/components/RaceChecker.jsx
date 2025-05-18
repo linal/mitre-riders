@@ -140,6 +140,15 @@ export default function RaceChecker() {
     >
       <div className="p-4 space-y-4">
       
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+        <h3 className="text-lg font-medium text-blue-800 mb-1">Race Checker</h3>
+        <p className="text-sm text-blue-600">
+          This tool displays British Cycling race data for club members. Data is fetched from the British Cycling Website 
+          when you select a year or click "Go". Results include both Road & Track and Cyclocross points and race counts. 
+          Data is cached for 24 hours to improve performance.
+        </p>
+      </div>
+      
       <div className="block md:flex md:flex-row md:items-center md:space-x-4 space-y-2 md:space-y-0 mb-4">
         <div className="flex items-center">
           <label className="text-sm mr-1 w-10">Year:</label>
