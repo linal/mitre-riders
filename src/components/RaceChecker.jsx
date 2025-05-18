@@ -46,7 +46,7 @@ export default function RaceChecker() {
   const [raceTypeFilter, setRaceTypeFilter] = useState(queryParams.raceType);
   const [categoryFilter, setCategoryFilter] = useState(queryParams.category);
   const [uniqueClubs, setUniqueClubs] = useState([]);
-  const [uniqueCategories, setUniqueCategories] = useState([]);
+  // Using hardcoded categories instead of dynamic ones
 
   const fetchRaceData = async () => {
     setLoading(true);
@@ -64,13 +64,7 @@ export default function RaceChecker() {
       const clubs = new Set(Object.values(allData).map(racer => racer.club));
       setUniqueClubs([...clubs].sort());
       
-      // Extract unique categories from the data and sort alphabetically
-      const categories = new Set(
-        Object.values(allData)
-          .filter(racer => racer.category)
-          .map(racer => racer.category)
-      );
-      setUniqueCategories([...categories].sort());
+      // We're using hardcoded categories, so no need to extract them from data
     } catch (error) {
       console.error("Error fetching race data:", error);
     } finally {
@@ -275,9 +269,6 @@ export default function RaceChecker() {
             <option value="2nd">2nd</option>
             <option value="3rd">3rd</option>
             <option value="4th">4th</option>
-            {uniqueCategories.map(category => (
-              <option key={category} value={category}>{category}</option>
-            ))}
             <option value="unlicensed">Unlicensed</option>
           </select>
         </div>
