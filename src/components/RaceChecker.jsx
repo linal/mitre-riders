@@ -137,15 +137,26 @@ export default function RaceChecker() {
             <div className="text-sm text-blue-700">
               {data[racer.bc] ? `Races: ${data[racer.bc].raceCount}` : "Not checked"}
             </div>
-            <div className="text-sm text-green-700">
-              {data[racer.bc] ? `Points: ${data[racer.bc].points}` : ""}
+            <div className="text-sm text-blue-700">
+              {data[racer.bc]?.roadAndTrackPoints ? `Road & Track: ${data[racer.bc].roadAndTrackPoints}` : ""}
             </div>
-            <button
-              onClick={() => window.open(`https://www.britishcycling.org.uk/points?d=4&person_id=${racer.bc}&year=${year}`, "_blank")}
-              className="bg-gray-200 px-3 py-1 rounded"
-            >
-              View Results
-            </button>
+            <div className="text-sm text-orange-700">
+              {data[racer.bc]?.cyclocrossPoints ? `Cyclocross: ${data[racer.bc].cyclocrossPoints}` : ""}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => window.open(`https://www.britishcycling.org.uk/points?d=4&person_id=${racer.bc}&year=${year}`, "_blank")}
+                className="bg-gray-200 px-3 py-1 rounded text-xs"
+              >
+                Road Results
+              </button>
+              <button
+                onClick={() => window.open(`https://www.britishcycling.org.uk/points?d=6&person_id=${racer.bc}&year=${year}`, "_blank")}
+                className="bg-gray-200 px-3 py-1 rounded text-xs"
+              >
+                CX Results
+              </button>
+            </div>
           </div>
         ))}
       </div>

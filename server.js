@@ -28,40 +28,86 @@ app.get('/api/race-data', async (req, res) => {
   }
 
   try {
-    const url = `https://www.britishcycling.org.uk/points?d=4&person_id=${person_id}&year=${year}`;
-    console.log(url);
-    const response = await fetch(url);
-    const html = await response.text();
+    // Fetch regular points (d=4)
+    const regularUrl = `https://www.britishcycling.org.uk/points?d=4&person_id=${person_id}&year=${year}`;
+    console.log(regularUrl);
+    const regularResponse = await fetch(regularUrl);
+    const regularHtml = await regularResponse.text();
 
-    // Deduplicate races based on event ID in URL
-    const tbodyStart = html.indexOf("<tbody>");
-    const tbodyEnd = html.indexOf("</tbody>");
-    let raceCount = 0;
+    // Fetch cyclocross points (d=6)
+    const cyclocrossUrl = `https://www.britishcycling.org.uk/points?d=6&person_id=${person_id}&year=${year}`;
+    console.log(cyclocrossUrl);
+    const cyclocrossResponse = await fetch(cyclocrossUrl);
+    const cyclocrossHtml = await cyclocrossResponse.text();
 
-    if (tbodyStart !== -1 && tbodyEnd !== -1) {
-      const tbody = html.slice(tbodyStart, tbodyEnd);
+    // Process regular points
+    let regularRaceCount = 0;
+    let regularPoints = 0;
+    
+    // Deduplicate races based on event ID in URL for regular points
+    const regularTbodyStart = regularHtml.indexOf("<tbody>");
+    const regularTbodyEnd = regularHtml.indexOf("</tbody>");
+    
+    if (regularTbodyStart !== -1 && regularTbodyEnd !== -1) {
+      const tbody = regularHtml.slice(regularTbodyStart, regularTbodyEnd);
       const eventIdMatches = [...tbody.matchAll(/\/events\/details\/(\d+)\//g)];
       const uniqueEventIds = new Set(eventIdMatches.map(match => match[1]));
-      raceCount = uniqueEventIds.size;
+      regularRaceCount = uniqueEventIds.size;
     }
 
-    // Extract total points from <tfoot>
-    let points = 0;
-    const tfootStart = html.indexOf("<tfoot>");
-    if (tfootStart !== -1) {
-      let pos = html.indexOf("<td>", tfootStart);
+    // Extract total points from <tfoot> for regular points
+    const regularTfootStart = regularHtml.indexOf("<tfoot>");
+    if (regularTfootStart !== -1) {
+      let pos = regularHtml.indexOf("<td>", regularTfootStart);
       for (let i = 0; i < 4 && pos !== -1; i++) {
-        pos = html.indexOf("<td>", pos + 1);
+        pos = regularHtml.indexOf("<td>", pos + 1);
       }
       if (pos !== -1) {
         const start = pos + 4;
-        const end = html.indexOf("</td>", start);
-        const value = html.slice(start, end).trim();
-        points = isNaN(Number(value)) ? 0 : Number(value);
+        const end = regularHtml.indexOf("</td>", start);
+        const value = regularHtml.slice(start, end).trim();
+        regularPoints = isNaN(Number(value)) ? 0 : Number(value);
       }
     }
 
-    const result = { raceCount, points };
+    // Process cyclocross points
+    let cyclocrossRaceCount = 0;
+    let cyclocrossPoints = 0;
+    
+    // Deduplicate races based on event ID in URL for cyclocross points
+    const cyclocrossTbodyStart = cyclocrossHtml.indexOf("<tbody>");
+    const cyclocrossTbodyEnd = cyclocrossHtml.indexOf("</tbody>");
+    
+    if (cyclocrossTbodyStart !== -1 && cyclocrossTbodyEnd !== -1) {
+      const tbody = cyclocrossHtml.slice(cyclocrossTbodyStart, cyclocrossTbodyEnd);
+      const eventIdMatches = [...tbody.matchAll(/\/events\/details\/(\d+)\//g)];
+      const uniqueEventIds = new Set(eventIdMatches.map(match => match[1]));
+      cyclocrossRaceCount = uniqueEventIds.size;
+    }
+
+    // Extract total points from <tfoot> for cyclocross points
+    const cyclocrossTfootStart = cyclocrossHtml.indexOf("<tfoot>");
+    if (cyclocrossTfootStart !== -1) {
+      let pos = cyclocrossHtml.indexOf("<td>", cyclocrossTfootStart);
+      for (let i = 0; i < 4 && pos !== -1; i++) {
+        pos = cyclocrossHtml.indexOf("<td>", pos + 1);
+      }
+      if (pos !== -1) {
+        const start = pos + 4;
+        const end = cyclocrossHtml.indexOf("</td>", start);
+        const value = cyclocrossHtml.slice(start, end).trim();
+        cyclocrossPoints = isNaN(Number(value)) ? 0 : Number(value);
+      }
+    }
+
+    // Combine results
+    const result = { 
+      raceCount: regularRaceCount + cyclocrossRaceCount, 
+      points: regularPoints + cyclocrossPoints,
+      roadAndTrackPoints: regularPoints,
+      cyclocrossPoints
+    };
+    
     cache[cacheKey] = { data: result, timestamp: now };
     res.json(result);
   } catch (err) {
