@@ -137,14 +137,22 @@ export default function RaceChecker() {
             <div className="text-xl font-semibold">{racer.name}</div>
             <div className="text-sm text-gray-500">BC No: {racer.bc}</div>
             <div className="text-sm text-gray-500">Club: {racer.club}</div>
-            <div className="text-sm text-blue-700">
-              {data[racer.bc] ? `Races: ${data[racer.bc].raceCount}` : "Not checked"}
-            </div>
-            <div className="text-sm text-blue-700">
-              {data[racer.bc]?.roadAndTrackPoints ? `Road & Track: ${data[racer.bc].roadAndTrackPoints}` : ""}
-            </div>
-            <div className="text-sm text-orange-700">
-              {data[racer.bc]?.cyclocrossPoints ? `Cyclocross: ${data[racer.bc].cyclocrossPoints}` : ""}
+            <div className="flex gap-2 items-center">
+              {data[racer.bc] && (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  Races: {data[racer.bc].raceCount}
+                </span>
+              )}
+              {data[racer.bc]?.roadAndTrackPoints && (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  Road & Track: {data[racer.bc].roadAndTrackPoints}
+                </span>
+              )}
+              {data[racer.bc]?.cyclocrossPoints && (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                  Cyclocross: {data[racer.bc].cyclocrossPoints}
+                </span>
+              )}
             </div>
             <div className="flex gap-2">
               <button
