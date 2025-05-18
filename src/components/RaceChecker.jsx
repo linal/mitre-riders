@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import LoadingOverlay from "react-loading-overlay-ts";
+import { ThemeContext } from "../main";
 
 // Parse URL query parameters
 function getQueryParams() {
@@ -33,6 +34,7 @@ function updateQueryParams(params) {
 
 export default function RaceChecker() {
   const queryParams = getQueryParams();
+  const { darkMode, toggleDarkMode } = useContext(ThemeContext);
   const [year, setYear] = useState(queryParams.year);
   const [data, setData] = useState({});
   const [loading, setLoading] = useState(true);
@@ -129,11 +131,13 @@ export default function RaceChecker() {
         })
       }}
     >
-      <div className="p-4 space-y-4">
+      <div className={`p-4 space-y-4 ${darkMode ? 'dark bg-gray-900 text-white' : 'bg-white'}`}>
       
-      <div className="bg-white border-l-4 border-blue-600 rounded shadow-md p-4 mb-6 mx-2">
-        <h3 className="text-lg font-medium text-gray-800 mb-2">Race Checker</h3>
-        <p className="text-sm text-gray-600 leading-relaxed">
+      <div className={`border-l-4 border-blue-600 rounded shadow-md p-4 mb-6 mx-2 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+        <div className="flex justify-between items-center mb-2">
+          <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-800'}`}>Race Checker</h3>
+        </div>
+        <p className={`text-sm leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
           This tool displays British Cycling race data for club members. Data is fetched from the British Cycling Website 
           when you select a year or click "Go". Results include both Road & Track and Cyclocross points and race counts. 
           Data is cached for 24 hours to improve performance. The server filters out duplicate race entries by extracting 
@@ -144,13 +148,24 @@ export default function RaceChecker() {
       </div>
       
       <div className="block md:flex md:flex-row md:items-center md:space-x-4 space-y-2 md:space-y-0 mb-4">
+                
+        <div className="flex items-center ml-auto">
+          <button
+            onClick={toggleDarkMode}
+            className={`p-2 rounded-full ${darkMode ? 'bg-gray-700 text-yellow-300' : 'bg-gray-200 text-gray-800'}`}
+            aria-label="Toggle dark mode"
+          >
+            {darkMode ? '☀️' : '🌙'}
+          </button>
+        </div>
+
         <div className="flex items-center">
-          <label className="text-sm mr-1 w-10">Year:</label>
+          <label className={`text-sm mr-1 w-10 ${darkMode ? 'text-gray-300' : ''}`}>Year:</label>
           <div className="flex flex-1">
             <select
               value={year}
               onChange={(e) => setYear(e.target.value)}
-              className="border rounded px-1 py-1 text-sm"
+              className={`border rounded px-1 py-1 text-sm ${darkMode ? 'bg-gray-700 text-white border-gray-600' : ''}`}
             >
               {[...Array(10)].map((_, i) => {
                 const y = 2025 - i;
@@ -160,19 +175,19 @@ export default function RaceChecker() {
             <button
               onClick={fetchRaceData}
               disabled={loading}
-              className="bg-blue-600 text-white px-1 py-1 rounded text-xs ml-1"
+              className={`bg-blue-600 text-white px-1 py-1 rounded text-xs ml-1 ${darkMode ? 'hover:bg-blue-700' : ''}`}
             >
               {loading ? "..." : "Go"}
             </button>
           </div>
         </div>
-        
+
         <div className="flex items-center">
-          <label className="text-sm mr-1 w-10">Sort:</label>
+          <label className={`text-sm mr-1 w-10 ${darkMode ? 'text-gray-300' : ''}`}>Sort:</label>
           <select
             value={sortKey}
             onChange={(e) => setSortKey(e.target.value)}
-            className="border rounded px-1 py-1 text-sm flex-1"
+            className={`border rounded px-1 py-1 text-sm flex-1 ${darkMode ? 'bg-gray-700 text-white border-gray-600' : ''}`}
           >
             <option value="name">Name</option>
             <option value="races">Race Count</option>
@@ -182,22 +197,22 @@ export default function RaceChecker() {
         </div>
         
         <div className="flex items-center">
-          <label className="text-sm mr-1 w-10">Find:</label>
+          <label className={`text-sm mr-1 w-10 ${darkMode ? 'text-gray-300' : ''}`}>Find:</label>
           <input
             type="text"
             value={filterText}
             onChange={(e) => setFilterText(e.target.value)}
             placeholder="Name..."
-            className="border px-1 py-1 rounded text-sm flex-1"
+            className={`border px-1 py-1 rounded text-sm flex-1 ${darkMode ? 'bg-gray-700 text-white border-gray-600 placeholder-gray-400' : ''}`}
           />
         </div>
         
         <div className="flex items-center">
-          <label className="text-sm mr-1 w-10">Club:</label>
+          <label className={`text-sm mr-1 w-10 ${darkMode ? 'text-gray-300' : ''}`}>Club:</label>
           <select
             value={clubFilter}
             onChange={(e) => setClubFilter(e.target.value)}
-            className="border rounded px-1 py-1 text-sm flex-1"
+            className={`border rounded px-1 py-1 text-sm flex-1 ${darkMode ? 'bg-gray-700 text-white border-gray-600' : ''}`}
           >
             <option value="">All</option>
             {uniqueClubs.map(club => (
@@ -207,11 +222,11 @@ export default function RaceChecker() {
         </div>
         
         <div className="flex items-center">
-          <label className="text-sm mr-1 w-10">Type:</label>
+          <label className={`text-sm mr-1 w-10 ${darkMode ? 'text-gray-300' : ''}`}>Type:</label>
           <select
             value={raceTypeFilter}
             onChange={(e) => setRaceTypeFilter(e.target.value)}
-            className="border rounded px-1 py-1 text-sm flex-1"
+            className={`border rounded px-1 py-1 text-sm flex-1 ${darkMode ? 'bg-gray-700 text-white border-gray-600' : ''}`}
           >
             <option value="all">All</option>
             <option value="roadAndTrack">Road & Track</option>
@@ -222,7 +237,7 @@ export default function RaceChecker() {
         <div className="flex items-center">
           <button
             onClick={handleClearFilters}
-            className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded text-xs"
+            className={`px-3 py-1 rounded text-xs ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
           >
             Clear Filters
           </button>
@@ -231,10 +246,10 @@ export default function RaceChecker() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {sortedFilteredRacers.map(([racerId, racer]) => (
-          <div key={racerId} className="rounded-2xl shadow-md border p-4 space-y-2 bg-white">
-            <div className="text-xl font-semibold">{racer.name}</div>
-            <div className="text-sm text-gray-500">BC No: {racerId}</div>
-            <div className="text-sm text-gray-500">Club: {racer.club}</div>
+          <div key={racerId} className={`rounded-2xl shadow-md border p-4 space-y-2 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white'}`}>
+            <div className={`text-xl font-semibold ${darkMode ? 'text-white' : ''}`}>{racer.name}</div>
+            <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>BC No: {racerId}</div>
+            <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Club: {racer.club}</div>
             <div className="space-y-2">
               <div className="flex gap-2 items-center flex-wrap">
                 {(raceTypeFilter === "all") && (
@@ -270,7 +285,7 @@ export default function RaceChecker() {
               {racer.roadAndTrackRaceCount > 0 && (
                 <button
                   onClick={() => window.open(`https://www.britishcycling.org.uk/points?d=4&person_id=${racerId}&year=${year}`, "_blank")}
-                  className="bg-gray-200 px-3 py-1 rounded text-xs"
+                  className={`px-3 py-1 rounded text-xs ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
                 >
                   Road Results
                 </button>
@@ -278,7 +293,7 @@ export default function RaceChecker() {
               {racer.cyclocrossRaceCount > 0 && (
                 <button
                   onClick={() => window.open(`https://www.britishcycling.org.uk/points?d=6&person_id=${racerId}&year=${year}`, "_blank")}
-                  className="bg-gray-200 px-3 py-1 rounded text-xs"
+                  className={`px-3 py-1 rounded text-xs ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
                 >
                   CX Results
                 </button>
