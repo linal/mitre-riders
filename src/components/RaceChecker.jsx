@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 const racers = [
   { name: "Marek Shafer", bc: "670931", club: "Brighton Mitre CC" },
@@ -44,6 +44,10 @@ export default function RaceChecker() {
     setData(newData);
     setLoading(false);
   };
+  
+  useEffect(() => {
+    handleCheckAll();
+  }, []);
 
   // Get unique clubs for the dropdown
   const uniqueClubs = [...new Set(racers.map(racer => racer.club))];
