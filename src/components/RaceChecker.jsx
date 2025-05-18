@@ -62,8 +62,10 @@ export default function RaceChecker() {
         return a.name.localeCompare(b.name);
       } else if (sortKey === "races") {
         return (bData?.raceCount || 0) - (aData?.raceCount || 0);
-      } else if (sortKey === "points") {
-        return (bData?.points || 0) - (aData?.points || 0);
+      } else if (sortKey === "roadAndTrack") {
+        return (bData?.roadAndTrackPoints || 0) - (aData?.roadAndTrackPoints || 0);
+      } else if (sortKey === "cyclocross") {
+        return (bData?.cyclocrossPoints || 0) - (aData?.cyclocrossPoints || 0);
       }
       return 0;
     });
@@ -100,7 +102,8 @@ export default function RaceChecker() {
           >
             <option value="name">Name</option>
             <option value="races">Race Count</option>
-            <option value="points">Points</option>
+            <option value="roadAndTrack">Road & Track</option>
+            <option value="cyclocross">Cyclocross</option>
           </select>
         </div>
         <div className="flex items-center gap-2">
