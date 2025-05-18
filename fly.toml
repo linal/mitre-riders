@@ -1,4 +1,4 @@
-app = "bc-points-app"
+app = "mitre-riders"
 primary_region = "lhr"  # London region, change as needed
 
 [build]
