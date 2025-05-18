@@ -267,18 +267,22 @@ export default function RaceChecker() {
               </div>
             </div>
             <div className="flex gap-2">
-              <button
-                onClick={() => window.open(`https://www.britishcycling.org.uk/points?d=4&person_id=${racerId}&year=${year}`, "_blank")}
-                className="bg-gray-200 px-3 py-1 rounded text-xs"
-              >
-                Road Results
-              </button>
-              <button
-                onClick={() => window.open(`https://www.britishcycling.org.uk/points?d=6&person_id=${racerId}&year=${year}`, "_blank")}
-                className="bg-gray-200 px-3 py-1 rounded text-xs"
-              >
-                CX Results
-              </button>
+              {racer.roadAndTrackRaceCount > 0 && (
+                <button
+                  onClick={() => window.open(`https://www.britishcycling.org.uk/points?d=4&person_id=${racerId}&year=${year}`, "_blank")}
+                  className="bg-gray-200 px-3 py-1 rounded text-xs"
+                >
+                  Road Results
+                </button>
+              )}
+              {racer.cyclocrossRaceCount > 0 && (
+                <button
+                  onClick={() => window.open(`https://www.britishcycling.org.uk/points?d=6&person_id=${racerId}&year=${year}`, "_blank")}
+                  className="bg-gray-200 px-3 py-1 rounded text-xs"
+                >
+                  CX Results
+                </button>
+              )}
             </div>
           </div>
         ))}
