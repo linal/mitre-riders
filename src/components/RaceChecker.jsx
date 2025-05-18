@@ -143,12 +143,12 @@ export default function RaceChecker() {
                   Races: {data[racer.bc].raceCount}
                 </span>
               )}
-              {data[racer.bc]?.roadAndTrackPoints && (
+              {data[racer.bc]?.roadAndTrackPoints > 0 && (
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                   Road & Track: {data[racer.bc].roadAndTrackPoints}
                 </span>
               )}
-              {data[racer.bc]?.cyclocrossPoints && (
+              {data[racer.bc]?.cyclocrossPoints > 0 && (
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
                   Cyclocross: {data[racer.bc].cyclocrossPoints}
                 </span>
