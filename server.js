@@ -18,6 +18,7 @@ const CACHE_TTL_MS = process.env.NODE_ENV === 'production'
 
 // Racer information stored on server
 const racers = [
+  /* Mitre */
   { name: "Marek Shafer", bc: "670931", club: "Brighton Mitre CC" },
   { name: "Alwyn Frank", bc: "482041", club: "Brighton Mitre CC" },
   { name: "Nathan Cozens", bc: "987321", club: "Brighton Mitre CC" },
@@ -33,7 +34,11 @@ const racers = [
   { name: "Ernesto Battinelli", bc: "746844", club: "Brighton Mitre CC" },
   { name: "Russell Bickle", bc: "442746", club: "Brighton Mitre CC" },
   { name: "Mark Day", bc: "651560", club: "Brighton Mitre CC" },
-  { name: "Richard Mount", bc: "335910", club: "Sussex Revolution Velo Club" }
+  /* SVRC */
+  { name: "Richard Mount", bc: "335910", club: "Sussex Revolution Velo Club" },
+  { name: "James Di Rico", bc: "29982", club: "Sussex Revolution Velo Club" },
+  { name: "Gemma Lewis", bc: "1128565", club: "Sussex Revolution Velo Club" },
+  { name: "Joshua Dunne", bc: "219770", club: "Sussex Revolution Velo Club" }
 ];
 
 // Original endpoint for single racer data
@@ -127,6 +132,14 @@ async function fetchRacerData(person_id, year) {
   const cyclocrossResponse = await fetch(cyclocrossUrl);
   const cyclocrossHtml = await cyclocrossResponse.text();
 
+  // Extract rider category from the Road & Track results
+  let category = '';
+  const categoryRegex = /<dd>Category:\s*([^<]+)<\/dd>/;
+  const categoryMatch = regularHtml.match(categoryRegex);
+  if (categoryMatch && categoryMatch[1]) {
+    category = categoryMatch[1].trim();
+  }
+
   // Process regular points
   let regularRaceCount = 0;
   let regularPoints = 0;
@@ -194,7 +207,8 @@ async function fetchRacerData(person_id, year) {
     roadAndTrackPoints: regularPoints,
     cyclocrossPoints,
     roadAndTrackRaceCount: regularRaceCount,
-    cyclocrossRaceCount
+    cyclocrossRaceCount,
+    category
   };
 }
 
