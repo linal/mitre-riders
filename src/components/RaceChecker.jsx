@@ -35,7 +35,8 @@ function getQueryParams() {
     year: params.get("year") || "2025",
     sort: params.get("sort") || "name",
     filter: params.get("filter") || "",
-    club: params.get("club") || ""
+    club: params.get("club") || "",
+    raceType: params.get("raceType") || "all"
   };
 }
 
@@ -51,6 +52,7 @@ function updateQueryParams(params) {
   if (params.sort !== "name") url.searchParams.set("sort", params.sort);
   if (params.filter) url.searchParams.set("filter", params.filter);
   if (params.club) url.searchParams.set("club", params.club);
+  if (params.raceType !== "all") url.searchParams.set("raceType", params.raceType);
   
   // Update URL without reloading page
   window.history.replaceState({}, "", url);
@@ -64,6 +66,7 @@ export default function RaceChecker() {
   const [sortKey, setSortKey] = useState(queryParams.sort);
   const [filterText, setFilterText] = useState(queryParams.filter);
   const [clubFilter, setClubFilter] = useState(queryParams.club);
+  const [raceTypeFilter, setRaceTypeFilter] = useState(queryParams.raceType);
 
   const handleCheckAll = async () => {
     setLoading(true);
@@ -78,8 +81,8 @@ export default function RaceChecker() {
   
   // Update URL when filters change
   useEffect(() => {
-    updateQueryParams({ year, sort: sortKey, filter: filterText, club: clubFilter });
-  }, [year, sortKey, filterText, clubFilter]);
+    updateQueryParams({ year, sort: sortKey, filter: filterText, club: clubFilter, raceType: raceTypeFilter });
+  }, [year, sortKey, filterText, clubFilter, raceTypeFilter]);
   
   useEffect(() => {
     handleCheckAll();
@@ -91,6 +94,14 @@ export default function RaceChecker() {
   const sortedFilteredRacers = [...racers]
     .filter(r => r.name.toLowerCase().includes(filterText.toLowerCase()))
     .filter(r => clubFilter === "" || r.club === clubFilter)
+    .filter(r => {
+      // Hide cards with no races of the selected type
+      if (!data[r.bc]) return false;
+      if (raceTypeFilter === "all") return true;
+      if (raceTypeFilter === "roadAndTrack" && data[r.bc]?.roadAndTrackRaceCount > 0) return true;
+      if (raceTypeFilter === "cyclocross" && data[r.bc]?.cyclocrossRaceCount > 0) return true;
+      return false;
+    })
     .sort((a, b) => {
       const aData = data[a.bc];
       const bData = data[b.bc];
@@ -191,6 +202,19 @@ export default function RaceChecker() {
             ))}
           </select>
         </div>
+        
+        <div className="flex items-center">
+          <label className="text-sm mr-1 w-10">Type:</label>
+          <select
+            value={raceTypeFilter}
+            onChange={(e) => setRaceTypeFilter(e.target.value)}
+            className="border rounded px-1 py-1 text-sm flex-1"
+          >
+            <option value="all">All</option>
+            <option value="roadAndTrack">Road & Track</option>
+            <option value="cyclocross">Cyclocross</option>
+          </select>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -201,29 +225,29 @@ export default function RaceChecker() {
             <div className="text-sm text-gray-500">Club: {racer.club}</div>
             <div className="space-y-2">
               <div className="flex gap-2 items-center flex-wrap">
-                {data[racer.bc] && (
+                {data[racer.bc] && (raceTypeFilter === "all") && (
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                     Total Races: {data[racer.bc].raceCount}
                   </span>
                 )}
-                {data[racer.bc]?.roadAndTrackRaceCount > 0 && (
+                {data[racer.bc]?.roadAndTrackRaceCount > 0 && (raceTypeFilter === "all" || raceTypeFilter === "roadAndTrack") && (
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                     Road & Track: {data[racer.bc].roadAndTrackRaceCount} races
                   </span>
                 )}
-                {data[racer.bc]?.cyclocrossRaceCount > 0 && (
+                {data[racer.bc]?.cyclocrossRaceCount > 0 && (raceTypeFilter === "all" || raceTypeFilter === "cyclocross") && (
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
                     Cyclocross: {data[racer.bc].cyclocrossRaceCount} races
                   </span>
                 )}
               </div>
               <div className="flex gap-2 items-center flex-wrap">
-                {data[racer.bc]?.roadAndTrackPoints > 0 && (
+                {data[racer.bc]?.roadAndTrackPoints > 0 && (raceTypeFilter === "all" || raceTypeFilter === "roadAndTrack") && (
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                     Road & Track: {data[racer.bc].roadAndTrackPoints} pts
                   </span>
                 )}
-                {data[racer.bc]?.cyclocrossPoints > 0 && (
+                {data[racer.bc]?.cyclocrossPoints > 0 && (raceTypeFilter === "all" || raceTypeFilter === "cyclocross") && (
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
                     Cyclocross: {data[racer.bc].cyclocrossPoints} pts
                   </span>
