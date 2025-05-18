@@ -20,3 +20,7 @@ primary_region = "lhr"  # London region, change as needed
   cpu_kind = "shared"
   cpus = 1
   memory_mb = 512
+
+[mounts]
+  source = "bc_points_data"
+  destination = "/data"

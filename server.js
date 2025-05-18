@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -10,7 +11,18 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'client')));
 
-// Simple in-memory cache
+// Configure cache directory based on environment
+const CACHE_DIR = process.env.NODE_ENV === 'production' 
+  ? '/data'
+  : path.join(__dirname, 'cache');
+
+// Create cache directory if it doesn't exist
+if (!fs.existsSync(CACHE_DIR)) {
+  fs.mkdirSync(CACHE_DIR, { recursive: true });
+  console.log(`Created cache directory: ${CACHE_DIR}`);
+}
+
+// Disk-based cache with in-memory lookup
 const cache = {};
 const CACHE_TTL_MS = process.env.NODE_ENV === 'production' 
   ? 24 * 60 * 60 * 1000  // 24 hours in production
@@ -49,22 +61,71 @@ app.get('/api/race-data', async (req, res) => {
   }
 
   const cacheKey = `${person_id}_${year}`;
+  const cacheFilePath = path.join(CACHE_DIR, `${cacheKey}.json`);
   const now = Date.now();
   const cacheDurationMinutes = CACHE_TTL_MS / (60 * 1000);
+  const currentYear = new Date().getFullYear().toString();
+  const isPreviousYear = year < currentYear;
 
-  if (cache[cacheKey] && now - cache[cacheKey].timestamp < CACHE_TTL_MS) {
-    console.log(`Cache HIT for ${cacheKey}. Cache duration: ${cacheDurationMinutes} minutes`);
-    return res.json(cache[cacheKey].data);
+  // Check memory cache first
+  if (cache[cacheKey]) {
+    // Previous years never expire, current year uses TTL
+    if (isPreviousYear || now - cache[cacheKey].timestamp < CACHE_TTL_MS) {
+      console.log(`Memory cache HIT for ${cacheKey}${isPreviousYear ? ' (previous year - never expires)' : ''}`);
+      return res.json(cache[cacheKey].data);
+    }
+  }
+  
+  // Check if cache file exists
+  if (fs.existsSync(cacheFilePath)) {
+    try {
+      const fileContent = fs.readFileSync(cacheFilePath, 'utf8');
+      const cacheEntry = JSON.parse(fileContent);
+      
+      // Previous years never expire, current year uses TTL
+      if (isPreviousYear || now - cacheEntry.timestamp < CACHE_TTL_MS) {
+        console.log(`Disk cache HIT for ${cacheKey}${isPreviousYear ? ' (previous year - never expires)' : ''}`);
+        // Update memory cache
+        cache[cacheKey] = cacheEntry;
+        return res.json(cacheEntry.data);
+      }
+    } catch (err) {
+      console.error(`Error reading cache file ${cacheFilePath}:`, err.message);
+    }
   }
   
   console.log(`Cache MISS for ${cacheKey}. Cache duration: ${cacheDurationMinutes} minutes`);
 
   try {
     const result = await fetchRacerData(person_id, year);
-    cache[cacheKey] = { data: result, timestamp: now };
+    const cacheEntry = { data: result, timestamp: now };
+    
+    // Update memory cache
+    cache[cacheKey] = cacheEntry;
+    
+    // Write to disk cache
+    fs.writeFile(cacheFilePath, JSON.stringify(cacheEntry), 'utf8', (err) => {
+      if (err) {
+        console.error(`Error writing cache file ${cacheFilePath}:`, err.message);
+      }
+    });
+    
     res.json(result);
   } catch (err) {
     console.error("Error fetching or parsing race data:", err.message);
+    
+    // If it's not a 500 error and we have a cached version, return that instead
+    if (!err.message.includes('500 error') && fs.existsSync(cacheFilePath)) {
+      try {
+        const fileContent = fs.readFileSync(cacheFilePath, 'utf8');
+        const cacheEntry = JSON.parse(fileContent);
+        console.log(`Using cached data for ${cacheKey} due to non-500 error`);
+        return res.json(cacheEntry.data);
+      } catch (cacheErr) {
+        console.error(`Error reading cache during error recovery:`, cacheErr.message);
+      }
+    }
+    
     res.status(500).send("Failed to fetch race data");
   }
 });
@@ -91,23 +152,112 @@ app.get('/api/all-race-data', async (req, res) => {
     for (const racer of racers) {
       const racerId = racer.bc;
       const cacheKey = `${racerId}_${year}`;
+      const cacheFilePath = path.join(CACHE_DIR, `${cacheKey}.json`);
+      const currentYear = new Date().getFullYear().toString();
+      const isPreviousYear = year < currentYear;
       
-      if (cache[cacheKey] && now - cache[cacheKey].timestamp < CACHE_TTL_MS) {
-        console.log(`Cache HIT for ${cacheKey}. Cache duration: ${cacheDurationMinutes} minutes`);
-        results[racerId] = {
-          ...cache[cacheKey].data,
-          name: racer.name,
-          club: racer.club
-        };
-      } else {
-        console.log(`Cache MISS for ${cacheKey}. Cache duration: ${cacheDurationMinutes} minutes`);
+      // Check memory cache first
+      if (cache[cacheKey]) {
+        // Previous years never expire, current year uses TTL
+        if (isPreviousYear || now - cache[cacheKey].timestamp < CACHE_TTL_MS) {
+          console.log(`Memory cache HIT for ${cacheKey}${isPreviousYear ? ' (previous year - never expires)' : ''}`);
+          results[racerId] = {
+            ...cache[cacheKey].data,
+            name: racer.name,
+            club: racer.club
+          };
+          continue; // Skip to next racer
+        }
+      } 
+      // Check disk cache
+      else if (fs.existsSync(cacheFilePath)) {
+        try {
+          const fileContent = fs.readFileSync(cacheFilePath, 'utf8');
+          const cacheEntry = JSON.parse(fileContent);
+          
+          // Previous years never expire, current year uses TTL
+          if (isPreviousYear || now - cacheEntry.timestamp < CACHE_TTL_MS) {
+            console.log(`Disk cache HIT for ${cacheKey}${isPreviousYear ? ' (previous year - never expires)' : ''}`);
+            // Update memory cache
+            cache[cacheKey] = cacheEntry;
+            results[racerId] = {
+              ...cacheEntry.data,
+              name: racer.name,
+              club: racer.club
+            };
+            continue; // Skip to next racer
+          }
+        } catch (err) {
+          console.error(`Error reading cache file ${cacheFilePath}:`, err.message);
+        }
+      }
+      
+      // If we get here, it's a cache miss
+      console.log(`Cache MISS for ${cacheKey}. Cache duration: ${cacheDurationMinutes} minutes`);
+      try {
         const result = await fetchRacerData(racerId, year);
-        cache[cacheKey] = { data: result, timestamp: now };
+        const cacheEntry = { data: result, timestamp: now };
+        
+        // Update memory cache
+        cache[cacheKey] = cacheEntry;
+        
+        // Write to disk cache
+        fs.writeFile(cacheFilePath, JSON.stringify(cacheEntry), 'utf8', (err) => {
+          if (err) {
+            console.error(`Error writing cache file ${cacheFilePath}:`, err.message);
+          }
+        });
+        
         results[racerId] = {
           ...result,
           name: racer.name,
           club: racer.club
         };
+      } catch (err) {
+        console.error(`Error fetching data for ${racerId}_${year}:`, err.message);
+        
+        // If it's not a 500 error and we have a cached version, use that
+        if (!err.message.includes('500 error') && fs.existsSync(cacheFilePath)) {
+          try {
+            const fileContent = fs.readFileSync(cacheFilePath, 'utf8');
+            const cacheEntry = JSON.parse(fileContent);
+            console.log(`Using cached data for ${cacheKey} due to non-500 error`);
+            results[racerId] = {
+              ...cacheEntry.data,
+              name: racer.name,
+              club: racer.club
+            };
+          } catch (cacheErr) {
+            console.error(`Error reading cache during error recovery:`, cacheErr.message);
+            // Add empty result if we can't get cached data
+            results[racerId] = {
+              raceCount: 0,
+              points: 0,
+              roadAndTrackPoints: 0,
+              cyclocrossPoints: 0,
+              roadAndTrackRaceCount: 0,
+              cyclocrossRaceCount: 0,
+              category: '',
+              name: racer.name,
+              club: racer.club,
+              error: 'Failed to fetch data'
+            };
+          }
+        } else {
+          // Add empty result for 500 errors or when no cache exists
+          results[racerId] = {
+            raceCount: 0,
+            points: 0,
+            roadAndTrackPoints: 0,
+            cyclocrossPoints: 0,
+            roadAndTrackRaceCount: 0,
+            cyclocrossRaceCount: 0,
+            category: '',
+            name: racer.name,
+            club: racer.club,
+            error: 'Failed to fetch data'
+          };
+        }
       }
     }
     
@@ -124,12 +274,24 @@ async function fetchRacerData(person_id, year) {
   const regularUrl = `https://www.britishcycling.org.uk/points?d=4&person_id=${person_id}&year=${year}`;
   console.log(regularUrl);
   const regularResponse = await fetch(regularUrl);
+  
+  // Check for server error
+  if (regularResponse.status === 500) {
+    throw new Error('BC website returned 500 error for regular points');
+  }
+  
   const regularHtml = await regularResponse.text();
 
   // Fetch cyclocross points (d=6)
   const cyclocrossUrl = `https://www.britishcycling.org.uk/points?d=6&person_id=${person_id}&year=${year}`;
   console.log(cyclocrossUrl);
   const cyclocrossResponse = await fetch(cyclocrossUrl);
+  
+  // Check for server error
+  if (cyclocrossResponse.status === 500) {
+    throw new Error('BC website returned 500 error for cyclocross points');
+  }
+  
   const cyclocrossHtml = await cyclocrossResponse.text();
 
   // Extract rider category from the Road & Track results
