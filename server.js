@@ -24,10 +24,14 @@ app.get('/api/race-data', async (req, res) => {
 
   const cacheKey = `${person_id}_${year}`;
   const now = Date.now();
+  const cacheDurationMinutes = CACHE_TTL_MS / (60 * 1000);
 
   if (cache[cacheKey] && now - cache[cacheKey].timestamp < CACHE_TTL_MS) {
+    console.log(`Cache HIT for ${cacheKey}. Cache duration: ${cacheDurationMinutes} minutes`);
     return res.json(cache[cacheKey].data);
   }
+  
+  console.log(`Cache MISS for ${cacheKey}. Cache duration: ${cacheDurationMinutes} minutes`);
 
   try {
     // Fetch regular points (d=4)
