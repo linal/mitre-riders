@@ -136,7 +136,9 @@ export default function RaceChecker() {
         <p className="text-sm text-blue-600">
           This tool displays British Cycling race data for club members. Data is fetched from the British Cycling Website 
           when you select a year or click "Go". Results include both Road & Track and Cyclocross points and race counts. 
-          Data is cached for 24 hours to improve performance.
+          Data is cached for 24 hours to improve performance. The server filters out duplicate race entries by extracting 
+          unique event IDs from the HTML response, ensuring each race is only counted once even if a rider participated in 
+          multiple events within the same race.
         </p>
       </div>
       
