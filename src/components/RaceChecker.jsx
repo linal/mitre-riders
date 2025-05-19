@@ -304,6 +304,66 @@ export default function RaceChecker() {
         </div>
       </div>
 
+      {/* Summary section with totals */}
+      <div className={`p-4 rounded-lg mb-4 ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+        <h3 className={`text-sm font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-700'}`}>Summary Totals</h3>
+        <div className="grid gap-3 mb-3" style={{ 
+          gridTemplateColumns: `repeat(${raceTypeFilter === "all" ? 3 : 2}, 1fr)`
+        }}>
+          <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-white'} shadow-sm`}>
+            <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Total Riders</div>
+            <div className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{sortedFilteredRacers.length}</div>
+          </div>
+          {(raceTypeFilter === "all" || raceTypeFilter === "roadAndTrack") && (
+            <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-white'} shadow-sm`}>
+              <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Total Road & Track Points</div>
+              <div className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                {sortedFilteredRacers.reduce((sum, [_, racer]) => sum + (racer.roadAndTrackPoints || 0), 0)}
+              </div>
+            </div>
+          )}
+          {(raceTypeFilter === "all" || raceTypeFilter === "cyclocross") && (
+            <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-white'} shadow-sm`}>
+              <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Total Cyclocross Points</div>
+              <div className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                {sortedFilteredRacers.reduce((sum, [_, racer]) => sum + (racer.cyclocrossPoints || 0), 0)}
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="grid gap-3" style={{ 
+          gridTemplateColumns: `repeat(${raceTypeFilter === "all" ? 3 : 2}, 1fr)`
+        }}>
+          <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-white'} shadow-sm`}>
+            <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Total Races</div>
+            <div className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+              {raceTypeFilter === "all" 
+                ? sortedFilteredRacers.reduce((sum, [_, racer]) => sum + (racer.raceCount || 0), 0)
+                : raceTypeFilter === "roadAndTrack"
+                  ? sortedFilteredRacers.reduce((sum, [_, racer]) => sum + (racer.roadAndTrackRaceCount || 0), 0)
+                  : sortedFilteredRacers.reduce((sum, [_, racer]) => sum + (racer.cyclocrossRaceCount || 0), 0)
+              }
+            </div>
+          </div>
+          {(raceTypeFilter === "all" || raceTypeFilter === "roadAndTrack") && (
+            <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-white'} shadow-sm`}>
+              <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Road & Track Races</div>
+              <div className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                {sortedFilteredRacers.reduce((sum, [_, racer]) => sum + (racer.roadAndTrackRaceCount || 0), 0)}
+              </div>
+            </div>
+          )}
+          {(raceTypeFilter === "all" || raceTypeFilter === "cyclocross") && (
+            <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-white'} shadow-sm`}>
+              <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Cyclocross Races</div>
+              <div className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                {sortedFilteredRacers.reduce((sum, [_, racer]) => sum + (racer.cyclocrossRaceCount || 0), 0)}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {sortedFilteredRacers.map(([racerId, racer]) => (
           <div key={racerId} className={`rounded-2xl shadow-md border p-4 space-y-2 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white'}`}>
@@ -315,6 +375,7 @@ export default function RaceChecker() {
                 Category: <span className="font-medium">{racer.category}</span>
               </div>
             )}
+
             <div className="space-y-2">
               <div className="flex gap-2 items-center flex-wrap">
                 {(raceTypeFilter === "all") && (
