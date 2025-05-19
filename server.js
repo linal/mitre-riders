@@ -113,7 +113,11 @@ app.get('/api/race-data', async (req, res) => {
     
     res.json(result);
   } catch (err) {
-    console.error("Error fetching or parsing race data:", err.message);
+    if (err.message.includes('500 error')) {
+      console.error(`BC API server error (500) when fetching data for ${person_id}_${year}: ${err.message}`);
+    } else {
+      console.error("Error fetching or parsing race data:", err.message);
+    }
     
     // If it's not a 500 error and we have a cached version, return that instead
     if (!err.message.includes('500 error') && fs.existsSync(cacheFilePath)) {
@@ -216,7 +220,11 @@ app.get('/api/all-race-data', async (req, res) => {
           club: racer.club
         };
       } catch (err) {
-        console.error(`Error fetching data for ${racerId}_${year}:`, err.message);
+        if (err.message.includes('500 error')) {
+          console.error(`BC API server error (500) when fetching data for ${racerId}_${year}: ${err.message}`);
+        } else {
+          console.error(`Error fetching data for ${racerId}_${year}:`, err.message);
+        }
         
         // If it's not a 500 error and we have a cached version, use that
         if (!err.message.includes('500 error') && fs.existsSync(cacheFilePath)) {
