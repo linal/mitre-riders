@@ -2,6 +2,8 @@
 
 A web application for tracking and displaying British Cycling race points for riders. This app allows users to view race points across different disciplines (Road & Track, Cyclocross) and filter/sort riders by various criteria.
 
+**Live Demo:** [https://mitre-riders.fly.dev/](https://mitre-riders.fly.dev/)
+
 ## Features
 
 - View race points for multiple riders simultaneously
@@ -29,7 +31,7 @@ A web application for tracking and displaying British Cycling race points for ri
 
 1. Clone the repository
    ```
-   git clone <repository-url>
+   git clone https://github.com/linal/mitre-riders.git
    cd bc-points-app
    ```
 
