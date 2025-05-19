@@ -1,4 +1,4 @@
-app = "mitre_riders"
+app = "mitre-riders"
 primary_region = "lhr"  # London region, change as needed
 
 [build]

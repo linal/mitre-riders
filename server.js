@@ -82,9 +82,10 @@ app.get('/api/race-data', async (req, res) => {
       const fileContent = fs.readFileSync(cacheFilePath, 'utf8');
       const cacheEntry = JSON.parse(fileContent);
       
-      // Previous years never expire, current year uses TTL
-      if (isPreviousYear || now - cacheEntry.timestamp < CACHE_TTL_MS) {
-        console.log(`Disk cache HIT for ${cacheKey}${isPreviousYear ? ' (previous year - never expires)' : ''}`);
+      // When running locally, always use cache if it exists
+      // In production, previous years never expire, current year uses TTL
+      if (process.env.NODE_ENV !== 'production' || isPreviousYear || now - cacheEntry.timestamp < CACHE_TTL_MS) {
+        console.log(`Disk cache HIT for ${cacheKey}${process.env.NODE_ENV !== 'production' ? ' (local environment - always using cache)' : isPreviousYear ? ' (previous year - never expires)' : ''}`);
         // Update memory cache
         cache[cacheKey] = cacheEntry;
         return res.json(cacheEntry.data);
@@ -175,9 +176,10 @@ app.get('/api/all-race-data', async (req, res) => {
           const fileContent = fs.readFileSync(cacheFilePath, 'utf8');
           const cacheEntry = JSON.parse(fileContent);
           
-          // Previous years never expire, current year uses TTL
-          if (isPreviousYear || now - cacheEntry.timestamp < CACHE_TTL_MS) {
-            console.log(`Disk cache HIT for ${cacheKey}${isPreviousYear ? ' (previous year - never expires)' : ''}`);
+          // When running locally, always use cache if it exists
+          // In production, previous years never expire, current year uses TTL
+          if (process.env.NODE_ENV !== 'production' || isPreviousYear || now - cacheEntry.timestamp < CACHE_TTL_MS) {
+            console.log(`Disk cache HIT for ${cacheKey}${process.env.NODE_ENV !== 'production' ? ' (local environment - always using cache)' : isPreviousYear ? ' (previous year - never expires)' : ''}`);
             // Update memory cache
             cache[cacheKey] = cacheEntry;
             results[racerId] = {
@@ -380,5 +382,5 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`App running on http://localhost:${PORT}`);
+  console.log(`App running in ${process.env.NODE_ENV || 'development'} mode on http://localhost:${PORT}`);
 });
