@@ -19,6 +19,7 @@ primary_region = "lhr"  # London region, change as needed
   cpus = 1
   memory_mb = 512
 
-[mounts]
+[[mounts]]
   source = "mitre_riders"
   destination = "/data"
+  processes = ["app"]
