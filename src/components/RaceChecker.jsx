@@ -318,8 +318,14 @@ export default function RaceChecker() {
           gridTemplateColumns: `repeat(${raceTypeFilter === "all" ? 3 : 2}, 1fr)`
         }}>
           <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-white'} shadow-sm`}>
-            <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Total Riders</div>
-            <div className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{sortedFilteredRacers.length}</div>
+            <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Total Active Riders</div>
+            <div className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+              {sortedFilteredRacers.filter(([_, racer]) => 
+                raceTypeFilter === "all" ? racer.raceCount > 0 
+                : raceTypeFilter === "roadAndTrack" ? racer.roadAndTrackRaceCount > 0
+                : racer.cyclocrossRaceCount > 0
+              ).length}
+            </div>
           </div>
           {(raceTypeFilter === "all" || raceTypeFilter === "roadAndTrack") && (
             <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-white'} shadow-sm`}>
