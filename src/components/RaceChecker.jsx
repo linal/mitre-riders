@@ -117,7 +117,14 @@ export default function RaceChecker() {
       if (sortKey === "name") {
         return aData.name.localeCompare(bData.name);
       } else if (sortKey === "races") {
-        return (bData.raceCount || 0) - (aData.raceCount || 0);
+        // Consider race type filter when sorting by race count
+        if (raceTypeFilter === "roadAndTrack") {
+          return (bData.roadAndTrackRaceCount || 0) - (aData.roadAndTrackRaceCount || 0);
+        } else if (raceTypeFilter === "cyclocross") {
+          return (bData.cyclocrossRaceCount || 0) - (aData.cyclocrossRaceCount || 0);
+        } else {
+          return (bData.raceCount || 0) - (aData.raceCount || 0);
+        }
       } else if (sortKey === "roadAndTrack") {
         return (bData.roadAndTrackPoints || 0) - (aData.roadAndTrackPoints || 0);
       } else if (sortKey === "cyclocross") {
