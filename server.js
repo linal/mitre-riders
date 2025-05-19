@@ -278,6 +278,85 @@ app.get('/api/all-race-data', async (req, res) => {
   }
 });
 
+// RESTful endpoint to get cache files by year
+app.get('/api/cache/:year', (req, res) => {
+  const { year } = req.params;
+  
+  if (!year || !/^\d{4}$/.test(year)) {
+    return res.status(400).send("Invalid year format. Please provide a 4-digit year.");
+  }
+  
+  try {
+    const files = fs.readdirSync(CACHE_DIR);
+    const matchingFiles = files.filter(file => {
+      return file.includes(`_${year}.json`);
+    });
+    
+    const result = matchingFiles.map(file => {
+      const racerId = file.split('_')[0];
+      return {
+        filename: file,
+        racerId,
+        year
+      };
+    });
+    
+    res.json({
+      count: result.length,
+      files: result
+    });
+  } catch (err) {
+    console.error(`Error listing cache files for year ${year}:`, err.message);
+    res.status(500).send(`Failed to list cache files for year ${year}`);
+  }
+});
+
+// RESTful endpoint to delete cache files by year
+app.delete('/api/cache/:year', (req, res) => {
+  const { year } = req.params;
+  
+  if (!year || !/^\d{4}$/.test(year)) {
+    return res.status(400).send("Invalid year format. Please provide a 4-digit year.");
+  }
+  
+  try {
+    const files = fs.readdirSync(CACHE_DIR);
+    const matchingFiles = files.filter(file => {
+      return file.includes(`_${year}.json`);
+    });
+    
+    let removedCount = 0;
+    const errors = [];
+    
+    matchingFiles.forEach(file => {
+      const filePath = path.join(CACHE_DIR, file);
+      try {
+        fs.unlinkSync(filePath);
+        removedCount++;
+        
+        // Also remove from memory cache if present
+        const racerId = file.split('_')[0];
+        const cacheKey = `${racerId}_${year}`;
+        if (cache[cacheKey]) {
+          delete cache[cacheKey];
+        }
+      } catch (err) {
+        errors.push({ file, error: err.message });
+      }
+    });
+    
+    res.json({
+      success: true,
+      totalFiles: matchingFiles.length,
+      removedFiles: removedCount,
+      errors: errors.length > 0 ? errors : undefined
+    });
+  } catch (err) {
+    console.error(`Error removing cache files for year ${year}:`, err.message);
+    res.status(500).send(`Failed to remove cache files for year ${year}`);
+  }
+});
+
 // Helper function to fetch and process racer data
 async function fetchRacerData(person_id, year) {
   // Fetch regular points (d=4)

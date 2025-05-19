@@ -1,10 +1,30 @@
 import React, { createContext, useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
+import { BrowserRouter, Routes, Route, Link, Navigate } from 'react-router-dom';
 import RaceChecker from './components/RaceChecker';
+import CacheManager from './components/CacheManager';
 import './index.css';
 
 // Create Theme Context
 export const ThemeContext = createContext();
+
+const Navigation = ({ darkMode }) => {
+  return (
+    <nav className={`px-4 py-3 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white border-b'}`}>
+      <div className="container mx-auto flex items-center justify-between">
+        <div className="font-bold text-lg">BC Points App</div>
+        <div className="flex space-x-4">
+          <Link to="/" className={`px-3 py-1 rounded text-sm ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
+            Race Checker
+          </Link>
+          <Link to="/cache" className={`px-3 py-1 rounded text-sm ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
+            Cache Manager
+          </Link>
+        </div>
+      </div>
+    </nav>
+  );
+};
 
 const App = () => {
   const [darkMode, setDarkMode] = useState(() => {
@@ -36,7 +56,16 @@ const App = () => {
 
   return (
     <ThemeContext.Provider value={{ darkMode, toggleDarkMode }}>
-      <RaceChecker />
+      <BrowserRouter>
+        <div className={darkMode ? 'bg-gray-900 min-h-screen' : 'bg-gray-50 min-h-screen'}>
+          <Navigation darkMode={darkMode} />
+          <Routes>
+            <Route path="/" element={<RaceChecker />} />
+            <Route path="/cache" element={<CacheManager />} />
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </div>
+      </BrowserRouter>
     </ThemeContext.Provider>
   );
 };
