@@ -72,6 +72,44 @@ export default function CacheManager() {
     }
   };
 
+  // Build cache for selected year
+  const buildCache = async () => {
+    if (!confirm(`Are you sure you want to build cache for all racers for ${selectedYear}? This may take some time.`)) {
+      return;
+    }
+    
+    setLoading(true);
+    setMessage(null);
+    try {
+      const apiBase = import.meta.env.VITE_API_BASE_URL || window.location.origin || 'http://localhost:3001';
+      const response = await fetch(`${apiBase}/api/build-cache`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ year: selectedYear })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to build cache: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      setMessage({ 
+        type: "success", 
+        text: `Successfully cached data for ${result.cached} racers (${result.failed} failed)` 
+      });
+      
+      // Refresh cache data
+      fetchCacheData();
+    } catch (error) {
+      console.error("Error building cache:", error);
+      setMessage({ type: "error", text: error.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Load cache data when year changes
   useEffect(() => {
     fetchCacheData();
@@ -108,6 +146,14 @@ export default function CacheManager() {
             className={`flex items-center px-3 py-1.5 rounded text-xs font-medium ${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'} text-white transition-colors duration-200`}
           >
             {loading ? 'Loading...' : 'Refresh'}
+          </button>
+          
+          <button
+            onClick={buildCache}
+            disabled={loading}
+            className={`flex items-center px-3 py-1.5 rounded text-xs font-medium ${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'} text-white transition-colors duration-200`}
+          >
+            Build Cache
           </button>
           
           <button
