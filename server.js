@@ -23,42 +23,40 @@ if (!fs.existsSync(CACHE_DIR)) {
   console.log(`Created cache directory: ${CACHE_DIR}`);
 }
 
+// Configure racers directory
+const RACERS_DIR = path.join(CACHE_DIR, 'racers');
+if (!fs.existsSync(RACERS_DIR)) {
+  fs.mkdirSync(RACERS_DIR, { recursive: true });
+  console.log(`Created racers directory: ${RACERS_DIR}`);
+}
+
 // Disk-based cache with in-memory lookup
 const cache = {};
 const CACHE_TTL_MS = process.env.NODE_ENV === 'production' 
   ? 24 * 60 * 60 * 1000  // 24 hours in production
   : 10 * 60 * 1000;      // 10 minutes in development
 
-// Racer information stored on server
-const racers = [
-  /* Mitre */
-  { bc: "670931" },
-  { bc: "482041" },
-  { bc: "987321" },
-  { bc: "1148505" },
-  { bc: "529480" },
-  { bc: "40747" },
-  { bc: "925710" },
-  { bc: "750617" },
-  { bc: "1149921" },
-  { bc: "57471" },
-  { bc: "1040818" },
-  { bc: "133044" },
-  { bc: "746844" },
-  { bc: "442746" },
-  { bc: "651560" },
-  { bc: "568700" },
-  { bc: "1041471" },
-  { bc: "72290" },
-  { bc: "410720" },
-  { bc: "99585" },
-  { bc: "134602" },
-  /* SVRC */
-  { bc: "335910" },
-  { bc: "29982" },
-  { bc: "1128565" },
-  { bc: "219770" }
-];
+// Racer information loaded from file or default list
+const RACERS_FILE = path.join(RACERS_DIR, 'racers.json');
+let racers = [];
+
+// Load racers from file or use default list
+function loadRacers() {
+  try {
+    if (fs.existsSync(RACERS_FILE)) {
+      const data = fs.readFileSync(RACERS_FILE, 'utf8');
+      racers = JSON.parse(data);
+      console.log(`Loaded ${racers.length} racers from ${RACERS_FILE}`);
+    }
+  } catch (err) {
+    console.error(`Error loading racers: ${err.message}`);
+    // Fallback to empty array if there's an error
+    racers = [];
+  }
+}
+
+// Load racers on startup
+loadRacers();
 
 // Original endpoint for single racer data
 app.get('/api/race-data', async (req, res) => {
@@ -145,6 +143,33 @@ app.get('/api/race-data', async (req, res) => {
 // Endpoint to get all racers
 app.get('/api/racers', (req, res) => {
   res.json(racers);
+});
+
+// Endpoint to add a single racer by BC number
+app.post('/api/racers', express.json(), (req, res) => {
+  try {
+    const { bc } = req.body;
+    
+    if (!bc) {
+      return res.status(400).send("Missing BC number");
+    }
+    
+    // Check if BC number already exists
+    if (racers.some(racer => racer.bc === bc)) {
+      return res.status(400).send("BC number already exists");
+    }
+    
+    // Add new racer
+    racers.push({ bc });
+    
+    // Save to file
+    fs.writeFileSync(RACERS_FILE, JSON.stringify(racers, null, 2), 'utf8');
+    
+    res.json({ success: true, bc, count: racers.length });
+  } catch (err) {
+    console.error(`Error adding racer: ${err.message}`);
+    res.status(500).send("Failed to add racer");
+  }
 });
 
 // New endpoint to build cache for all racers
