@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route, Link, Navigate } from 'react-router-dom';
 import RaceChecker from './components/RaceChecker';
 import CacheManager from './components/CacheManager';
 import AddRacer from './components/AddRacer';
-import RiderSummary from './components/RiderSummary';
+import ClubSummary from './components/ClubSummary';
 import './index.css';
 
 // Create Theme Context
@@ -25,8 +25,8 @@ const Navigation = ({ darkMode }) => {
           <Link to="/add-racer" className={`px-3 py-1 rounded text-sm ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
             Add Racer
           </Link>
-          <Link to="/rider-summary" className={`px-3 py-1 rounded text-sm ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
-            Rider Summary
+          <Link to="/club-summary" className={`px-3 py-1 rounded text-sm ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
+            Club Summary
           </Link>
         </div>
       </div>
@@ -71,7 +71,7 @@ const App = () => {
             <Route path="/" element={<RaceChecker />} />
             <Route path="/cache" element={<CacheManager />} />
             <Route path="/add-racer" element={<AddRacer />} />
-            <Route path="/rider-summary" element={<RiderSummary />} />
+            <Route path="/club-summary" element={<ClubSummary />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </div>

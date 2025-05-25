@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import LoadingOverlay from "react-loading-overlay-ts";
 import { ThemeContext } from "../main";
 
-export default function RiderSummary() {
+export default function ClubSummary() {
   const { darkMode } = useContext(ThemeContext);
   const [searchParams, setSearchParams] = useSearchParams();
   const [year, setYear] = useState(searchParams.get("year") || new Date().getFullYear().toString());
@@ -172,7 +172,7 @@ export default function RiderSummary() {
     <LoadingOverlay
       active={loading}
       spinner
-      text="Loading rider summary data..."
+      text="Loading club summary data..."
       styles={{
         overlay: (base) => ({
           ...base,
@@ -193,7 +193,7 @@ export default function RiderSummary() {
         <div className={`border-l-4 border-blue-600 rounded shadow-md p-4 mb-6 mx-2 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
           <div className="flex justify-between items-center mb-2">
             <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-              Rider Summary {clubFilter && `- ${clubFilter}`}
+              Club Summary {clubFilter && `- ${clubFilter}`}
             </h3>
           </div>
           <p className={`text-sm leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
