@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useRef } from "react";
 import { ThemeContext } from "../main";
 
 export default function CacheManager() {
@@ -9,13 +9,38 @@ export default function CacheManager() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
   const [selectedRacer, setSelectedRacer] = useState("");
+  const [racers, setRacers] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
   // Generate years for dropdown (current year and 9 previous years)
   useEffect(() => {
     const currentYear = new Date().getFullYear();
     const yearsList = Array.from({ length: 10 }, (_, i) => (currentYear - i).toString());
     setYears(yearsList);
+    
+    // Fetch racers list
+    fetchRacers();
   }, []);
+  
+  // Fetch racers from API
+  const fetchRacers = async () => {
+    try {
+      const apiBase = import.meta.env.VITE_API_BASE_URL || window.location.origin || 'http://localhost:3001';
+      const response = await fetch(`${apiBase}/api/racers`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch racers: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      setRacers(data);
+    } catch (error) {
+      console.error("Error fetching racers:", error);
+      setMessage({ type: "error", text: `Failed to load racers: ${error.message}` });
+    }
+  };
 
   // Fetch cache data for selected year
   const fetchCacheData = async () => {
@@ -157,6 +182,28 @@ export default function CacheManager() {
   useEffect(() => {
     fetchCacheData();
   }, [selectedYear]);
+  
+  // Handle clicks outside the dropdown to close it
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [dropdownRef]);
+  
+  // Filter racers based on search term
+  const filteredRacers = racers.filter(racer => {
+    const searchLower = searchTerm.toLowerCase();
+    const bcMatch = racer.bc.toLowerCase().includes(searchLower);
+    const nameMatch = racer.name && racer.name.toLowerCase().includes(searchLower);
+    return bcMatch || nameMatch;
+  });
 
   return (
     <div className={`p-4 space-y-4 ${darkMode ? 'dark bg-gray-900 text-white' : 'bg-white'}`}>
@@ -209,15 +256,45 @@ export default function CacheManager() {
         </div>
         
         <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center">
-            <label className={`text-sm mr-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Racer BC:</label>
-            <input
-              type="text"
-              value={selectedRacer}
-              onChange={(e) => setSelectedRacer(e.target.value)}
-              placeholder="Enter BC number"
-              className={`border rounded px-2 py-1.5 text-sm ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white border-gray-300'}`}
-            />
+          <div className="flex items-center relative" ref={dropdownRef}>
+            <label className={`text-sm mr-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Racer:</label>
+            <div className="relative">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setIsDropdownOpen(true);
+                }}
+                onClick={() => setIsDropdownOpen(true)}
+                placeholder="Search racer..."
+                className={`border rounded px-2 py-1.5 text-sm w-64 ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white border-gray-300'}`}
+              />
+              
+              {isDropdownOpen && (
+                <div className={`absolute z-10 mt-1 w-full max-h-60 overflow-auto rounded-md shadow-lg ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
+                  {filteredRacers.length > 0 ? (
+                    filteredRacers.map(racer => (
+                      <div
+                        key={racer.bc}
+                        onClick={() => {
+                          setSelectedRacer(racer.bc);
+                          setSearchTerm(racer.name ? `${racer.name} (${racer.bc})` : racer.bc);
+                          setIsDropdownOpen(false);
+                        }}
+                        className={`px-3 py-2 text-sm cursor-pointer ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                      >
+                        {racer.name ? `${racer.name} (${racer.bc})` : racer.bc}
+                      </div>
+                    ))
+                  ) : (
+                    <div className={`px-3 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      No racers found
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
           
           <button
