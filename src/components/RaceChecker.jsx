@@ -128,8 +128,16 @@ export default function RaceChecker() {
         }
       } else if (sortKey === "roadAndTrack") {
         return (bData.roadAndTrackPoints || 0) - (aData.roadAndTrackPoints || 0);
+      } else if (sortKey === "roadRegional") {
+        return (bData.roadRegionalPoints || 0) - (aData.roadRegionalPoints || 0);
+      } else if (sortKey === "roadNational") {
+        return (bData.roadNationalPoints || 0) - (aData.roadNationalPoints || 0);
       } else if (sortKey === "cyclocross") {
         return (bData.cyclocrossPoints || 0) - (aData.cyclocrossPoints || 0);
+      } else if (sortKey === "cxRegional") {
+        return (bData.cxRegionalPoints || 0) - (aData.cxRegionalPoints || 0);
+      } else if (sortKey === "cxNational") {
+        return (bData.cxNationalPoints || 0) - (aData.cxNationalPoints || 0);
       } else if (sortKey === "category") {
         // If one rider has a category and the other doesn't, the one with category comes first
         if (aData.category && !bData.category) return -1;
@@ -262,7 +270,11 @@ export default function RaceChecker() {
               <option value="name">Name</option>
               <option value="races">Race Count</option>
               <option value="roadAndTrack">Road & Track Pts</option>
+              <option value="roadRegional">Road Regional Pts</option>
+              <option value="roadNational">Road National Pts</option>
               <option value="cyclocross">Cyclocross Pts</option>
+              <option value="cxRegional">CX Regional Pts</option>
+              <option value="cxNational">CX National Pts</option>
               <option value="category">Category</option>
             </select>
           </div>
