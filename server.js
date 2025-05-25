@@ -32,32 +32,32 @@ const CACHE_TTL_MS = process.env.NODE_ENV === 'production'
 // Racer information stored on server
 const racers = [
   /* Mitre */
-  { name: "Marek Shafer", bc: "670931", club: "Brighton Mitre CC" },
-  { name: "Alwyn Frank", bc: "482041", club: "Brighton Mitre CC" },
-  { name: "Nathan Cozens", bc: "987321", club: "Brighton Mitre CC" },
-  { name: "Cesare Masset", bc: "1148505", club: "Brighton Mitre CC" },
-  { name: "John Tindell", bc: "529480", club: "Brighton Mitre CC" },
-  { name: "Jack Smith", bc: "40747", club: "Brighton Mitre CC" },
-  { name: "Daniel Magrizos", bc: "925710", club: "Brighton Mitre CC" },
-  { name: "Seamus Mcalister", bc: "750617", club: "Brighton Mitre CC" },
-  { name: "Ben Weaterton", bc: "1149921", club: "Brighton Mitre CC" },
-  { name: "Thomas Houghton", bc: "57471", club: "Brighton Mitre CC" },
-  { name: "Jash Hutheesing", bc: "1040818", club: "Brighton Mitre CC" },
-  { name: "Karla Boddy", bc: "133044", club: "Brighton Mitre CC" },
-  { name: "Ernesto Battinelli", bc: "746844", club: "Brighton Mitre CC" },
-  { name: "Russell Bickle", bc: "442746", club: "Brighton Mitre CC" },
-  { name: "Mark Day", bc: "651560", club: "Brighton Mitre CC" },
-  { name: "Clare Johnson", bc: "568700", club: "Brighton Mitre CC" },
-  { name: "Paul Cernicharo-Terol", bc: "1041471", club: "Brighton Mitre CC" },
-  { name: "James Hampshire", bc: "72290", club: "Brighton Mitre CC" },
-  { name: "Ben Watkins", bc: "410720", club: "Brighton Mitre CC" },
-  { name: "Daniel Fagg", bc: "99585", club: "Brighton Mitre CC" },
-  { name: "Michael Fox", bc: "134602", club: "Brighton Mitre CC" },
+  { bc: "670931" },
+  { bc: "482041" },
+  { bc: "987321" },
+  { bc: "1148505" },
+  { bc: "529480" },
+  { bc: "40747" },
+  { bc: "925710" },
+  { bc: "750617" },
+  { bc: "1149921" },
+  { bc: "57471" },
+  { bc: "1040818" },
+  { bc: "133044" },
+  { bc: "746844" },
+  { bc: "442746" },
+  { bc: "651560" },
+  { bc: "568700" },
+  { bc: "1041471" },
+  { bc: "72290" },
+  { bc: "410720" },
+  { bc: "99585" },
+  { bc: "134602" },
   /* SVRC */
-  { name: "Richard Mount", bc: "335910", club: "Sussex Revolution Velo Club" },
-  { name: "James Di Rico", bc: "29982", club: "Sussex Revolution Velo Club" },
-  { name: "Gemma Lewis", bc: "1128565", club: "Sussex Revolution Velo Club" },
-  { name: "Joshua Dunne", bc: "219770", club: "Sussex Revolution Velo Club" }
+  { bc: "335910" },
+  { bc: "29982" },
+  { bc: "1128565" },
+  { bc: "219770" }
 ];
 
 // Original endpoint for single racer data
@@ -231,9 +231,7 @@ app.get('/api/all-race-data', async (req, res) => {
       if (cache[cacheKey]) {
         console.log(`Memory cache HIT for ${cacheKey}`);
         results[racerId] = {
-          ...cache[cacheKey].data,
-          name: racer.name,
-          club: racer.club
+          ...cache[cacheKey].data
         };
         continue; // Skip to next racer
       } 
@@ -247,9 +245,7 @@ app.get('/api/all-race-data', async (req, res) => {
           // Update memory cache
           cache[cacheKey] = cacheEntry;
           results[racerId] = {
-            ...cacheEntry.data,
-            name: racer.name,
-            club: racer.club
+            ...cacheEntry.data
           };
           continue; // Skip to next racer
         } catch (err) {
@@ -271,8 +267,8 @@ app.get('/api/all-race-data', async (req, res) => {
         roadAndTrackRaceCount: 0,
         cyclocrossRaceCount: 0,
         category: '',
-        name: racer.name,
-        club: racer.club,
+        name: racer.name || 'Unknown',
+        club: racer.club || 'Unknown',
         error: 'No cached data available'
       };
     }
@@ -376,6 +372,22 @@ async function fetchRacerData(person_id, year) {
   }
   
   const regularHtml = await regularResponse.text();
+
+  // Extract name from the HTML
+  let name = '';
+  const nameRegex = /<h1 class="article__header__title-opener">Points: ([^<]+)<\/h1>/;
+  const nameMatch = regularHtml.match(nameRegex);
+  if (nameMatch && nameMatch[1]) {
+    name = nameMatch[1].trim();
+  }
+
+  // Extract club from the HTML
+  let club = '';
+  const clubRegex = /<dd>Year End Club: <a[^>]*>([^<]+)<\/a>/;
+  const clubMatch = regularHtml.match(clubRegex);
+  if (clubMatch && clubMatch[1]) {
+    club = clubMatch[1].trim();
+  }
 
   // Sleep for 3 seconds to avoid overwhelming the BC website
   await new Promise(resolve => setTimeout(resolve, 3000));
@@ -529,6 +541,8 @@ async function fetchRacerData(person_id, year) {
     roadAndTrackRaceCount: regularRaceCount,
     cyclocrossRaceCount,
     category,
+    name,
+    club,
     regionalPoints: regionalPoints + cyclocrossRegionalPoints,
     nationalPoints: nationalPoints + cyclocrossNationalPoints,
     roadRegionalPoints: regionalPoints,

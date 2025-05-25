@@ -95,7 +95,7 @@ export default function RaceChecker() {
   // Process and filter the data
   const racerEntries = Object.entries(data);
   const sortedFilteredRacers = racerEntries
-    .filter(([_, racer]) => racer.name.toLowerCase().includes(filterText.toLowerCase()))
+    .filter(([_, racer]) => racer.name && racer.name.toLowerCase().includes(filterText.toLowerCase()))
     .filter(([_, racer]) => clubFilter === "" || racer.club === clubFilter)
     .filter(([_, racer]) => {
       if (categoryFilter === "") return true;
