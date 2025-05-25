@@ -377,6 +377,9 @@ async function fetchRacerData(person_id, year) {
   
   const regularHtml = await regularResponse.text();
 
+  // Sleep for 3 seconds to avoid overwhelming the BC website
+  await new Promise(resolve => setTimeout(resolve, 3000));
+
   // Fetch cyclocross points (d=6)
   const cyclocrossUrl = `https://www.britishcycling.org.uk/points?d=6&person_id=${person_id}&year=${year}`;
   console.log(cyclocrossUrl);
