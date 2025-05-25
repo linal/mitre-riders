@@ -388,6 +388,15 @@ async function fetchRacerData(person_id, year) {
   if (clubMatch && clubMatch[1]) {
     club = clubMatch[1].trim();
   }
+  
+  // If club not found, try current club
+  if (!club) {
+    const currentClubRegex = /<dd>Current Club: <a[^>]*>([^<]+)<\/a>/;
+    const currentClubMatch = regularHtml.match(currentClubRegex);
+    if (currentClubMatch && currentClubMatch[1]) {
+      club = currentClubMatch[1].trim();
+    }
+  }
 
   // Sleep for 3 seconds to avoid overwhelming the BC website
   await new Promise(resolve => setTimeout(resolve, 3000));
@@ -513,6 +522,22 @@ async function fetchRacerData(person_id, year) {
             cyclocrossRegionalPoints += points;
           }
         }
+      }
+    }
+  }
+
+  // If club is still not found, try to extract from cyclocross HTML
+  if (!club) {
+    const cxClubRegex = /<dd>Year End Club: <a[^>]*>([^<]+)<\/a>/;
+    const cxClubMatch = cyclocrossHtml.match(cxClubRegex);
+    if (cxClubMatch && cxClubMatch[1]) {
+      club = cxClubMatch[1].trim();
+    } else {
+      // Try current club in cyclocross HTML
+      const cxCurrentClubRegex = /<dd>Current Club: <a[^>]*>([^<]+)<\/a>/;
+      const cxCurrentClubMatch = cyclocrossHtml.match(cxCurrentClubRegex);
+      if (cxCurrentClubMatch && cxCurrentClubMatch[1]) {
+        club = cxCurrentClubMatch[1].trim();
       }
     }
   }
