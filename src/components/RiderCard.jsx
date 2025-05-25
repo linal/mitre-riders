@@ -45,6 +45,37 @@ export default function RiderCard({ racerId, racer, year, raceTypeFilter }) {
             </span>
           )}
         </div>
+        {/* Regional and National Points - Road & Track */}
+        {((racer.roadRegionalPoints > 0 || racer.roadNationalPoints > 0) && (raceTypeFilter === "all" || raceTypeFilter === "roadAndTrack")) && (
+          <div className="flex gap-2 items-center flex-wrap">
+            {racer.roadRegionalPoints > 0 && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                Road Regional: {racer.roadRegionalPoints} pts
+              </span>
+            )}
+            {racer.roadNationalPoints > 0 && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                Road National: {racer.roadNationalPoints} pts
+              </span>
+            )}
+          </div>
+        )}
+        
+        {/* Regional and National Points - Cyclocross */}
+        {((racer.cxRegionalPoints > 0 || racer.cxNationalPoints > 0) && (raceTypeFilter === "all" || raceTypeFilter === "cyclocross")) && (
+          <div className="flex gap-2 items-center flex-wrap">
+            {racer.cxRegionalPoints > 0 && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                CX Regional: {racer.cxRegionalPoints} pts
+              </span>
+            )}
+            {racer.cxNationalPoints > 0 && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                CX National: {racer.cxNationalPoints} pts
+              </span>
+            )}
+          </div>
+        )}
       </div>
       <div className="flex gap-2 mt-2">
         {racer.roadAndTrackRaceCount > 0 && (
