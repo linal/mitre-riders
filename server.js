@@ -145,18 +145,40 @@ app.get('/api/racers', (req, res) => {
   res.json(racers);
 });
 
-// Endpoint to add a single racer by BC number
+// Endpoint to update racers list
 app.post('/api/racers', express.json(), (req, res) => {
+  try {
+    const newRacers = req.body;
+    
+    if (!Array.isArray(newRacers)) {
+      return res.status(400).send("Invalid format: expected an array of racers");
+    }
+    
+    // Update racers list
+    racers = newRacers;
+    
+    // Save to file
+    fs.writeFileSync(RACERS_FILE, JSON.stringify(racers, null, 2), 'utf8');
+    
+    res.json({ success: true, count: racers.length });
+  } catch (err) {
+    console.error(`Error updating racers: ${err.message}`);
+    res.status(500).send("Failed to update racers list");
+  }
+});
+
+// Endpoint to add a single racer by BC number
+app.post('/api/racers/add', express.json(), (req, res) => {
   try {
     const { bc } = req.body;
     
     if (!bc) {
-      return res.status(400).send("Missing BC number");
+      return res.status(400).json({ message: "Missing BC number" });
     }
     
     // Check if BC number already exists
     if (racers.some(racer => racer.bc === bc)) {
-      return res.status(400).send("BC number already exists");
+      return res.status(400).json({ message: "BC number already exists" });
     }
     
     // Add new racer
@@ -168,7 +190,7 @@ app.post('/api/racers', express.json(), (req, res) => {
     res.json({ success: true, bc, count: racers.length });
   } catch (err) {
     console.error(`Error adding racer: ${err.message}`);
-    res.status(500).send("Failed to add racer");
+    res.status(500).json({ message: "Failed to add racer" });
   }
 });
 
