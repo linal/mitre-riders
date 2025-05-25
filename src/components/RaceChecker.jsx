@@ -107,9 +107,10 @@ export default function RaceChecker() {
       return racer.category === categoryFilter;
     })
     .filter(([_, racer]) => {
-      if (raceTypeFilter === "all") return true;
-      if (raceTypeFilter === "roadAndTrack" && racer.roadAndTrackRaceCount > 0) return true;
-      if (raceTypeFilter === "cyclocross" && racer.cyclocrossRaceCount > 0) return true;
+      // Filter out riders with zero races
+      if (raceTypeFilter === "all") return racer.raceCount > 0;
+      if (raceTypeFilter === "roadAndTrack") return racer.roadAndTrackRaceCount > 0;
+      if (raceTypeFilter === "cyclocross") return racer.cyclocrossRaceCount > 0;
       return false;
     })
     .sort((a, b) => {
