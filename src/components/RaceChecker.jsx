@@ -127,6 +127,10 @@ export default function RaceChecker() {
         } else {
           return (bData.raceCount || 0) - (aData.raceCount || 0);
         }
+      } else if (sortKey === "roadAndTrackRaceCount") {
+        return (bData.roadAndTrackRaceCount || 0) - (aData.roadAndTrackRaceCount || 0);
+      } else if (sortKey === "cyclocrossRaceCount") {
+        return (bData.cyclocrossRaceCount || 0) - (aData.cyclocrossRaceCount || 0);
       } else if (sortKey === "roadAndTrack") {
         return (bData.roadAndTrackPoints || 0) - (aData.roadAndTrackPoints || 0);
       } else if (sortKey === "roadRegional") {

@@ -97,6 +97,8 @@ export default function FilterControls({
           >
             <option value="name">Name</option>
             <option value="races">Race Count</option>
+            <option value="roadAndTrackRaceCount">Road & Track Race Count</option>
+            <option value="cyclocrossRaceCount">Cyclocross Race Count</option>
             <option value="roadAndTrack">Road & Track Pts</option>
             <option value="roadRegional">Road Regional Pts</option>
             <option value="roadNational">Road National Pts</option>
