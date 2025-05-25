@@ -47,6 +47,12 @@ const racers = [
   { name: "Ernesto Battinelli", bc: "746844", club: "Brighton Mitre CC" },
   { name: "Russell Bickle", bc: "442746", club: "Brighton Mitre CC" },
   { name: "Mark Day", bc: "651560", club: "Brighton Mitre CC" },
+  { name: "Clare Johnson", bc: "568700", club: "Brighton Mitre CC" },
+  { name: "Paul Cernicharo-Terol", bc: "1041471", club: "Brighton Mitre CC" },
+  { name: "James Hampshire", bc: "72290", club: "Brighton Mitre CC" },
+  { name: "Ben Watkins", bc: "410720", club: "Brighton Mitre CC" },
+  { name: "Daniel Fagg", bc: "99585", club: "Brighton Mitre CC" },
+  { name: "Michael Fox", bc: "134602", club: "Brighton Mitre CC" },
   /* SVRC */
   { name: "Richard Mount", bc: "335910", club: "Sussex Revolution Velo Club" },
   { name: "James Di Rico", bc: "29982", club: "Sussex Revolution Velo Club" },
