@@ -32,26 +32,26 @@ const CACHE_TTL_MS = process.env.NODE_ENV === 'production'
 // Racer information stored on server
 const racers = [
   /* Mitre */
-  ////{ name: "Marek Shafer", bc: "670931", club: "Brighton Mitre CC" },
+  { name: "Marek Shafer", bc: "670931", club: "Brighton Mitre CC" },
   { name: "Alwyn Frank", bc: "482041", club: "Brighton Mitre CC" },
   { name: "Nathan Cozens", bc: "987321", club: "Brighton Mitre CC" },
-  ////{ name: "Cesare Masset", bc: "1148505", club: "Brighton Mitre CC" },
+  { name: "Cesare Masset", bc: "1148505", club: "Brighton Mitre CC" },
   { name: "John Tindell", bc: "529480", club: "Brighton Mitre CC" },
-  ////{ name: "Jack Smith", bc: "40747", club: "Brighton Mitre CC" },
-  ////{ name: "Daniel Magrizos", bc: "925710", club: "Brighton Mitre CC" },
-  ////{ name: "Seamus Mcalister", bc: "750617", club: "Brighton Mitre CC" },
-  ////{ name: "Ben Weaterton", bc: "1149921", club: "Brighton Mitre CC" },
-  ////{ name: "Thomas Houghton", bc: "57471", club: "Brighton Mitre CC" },
-  ////{ name: "Jash Hutheesing", bc: "1040818", club: "Brighton Mitre CC" },
+  { name: "Jack Smith", bc: "40747", club: "Brighton Mitre CC" },
+  { name: "Daniel Magrizos", bc: "925710", club: "Brighton Mitre CC" },
+  { name: "Seamus Mcalister", bc: "750617", club: "Brighton Mitre CC" },
+  { name: "Ben Weaterton", bc: "1149921", club: "Brighton Mitre CC" },
+  { name: "Thomas Houghton", bc: "57471", club: "Brighton Mitre CC" },
+  { name: "Jash Hutheesing", bc: "1040818", club: "Brighton Mitre CC" },
   { name: "Karla Boddy", bc: "133044", club: "Brighton Mitre CC" },
-  ////{ name: "Ernesto Battinelli", bc: "746844", club: "Brighton Mitre CC" },
-  ////{ name: "Russell Bickle", bc: "442746", club: "Brighton Mitre CC" },
-  ////{ name: "Mark Day", bc: "651560", club: "Brighton Mitre CC" },
+  { name: "Ernesto Battinelli", bc: "746844", club: "Brighton Mitre CC" },
+  { name: "Russell Bickle", bc: "442746", club: "Brighton Mitre CC" },
+  { name: "Mark Day", bc: "651560", club: "Brighton Mitre CC" },
   /* SVRC */
   { name: "Richard Mount", bc: "335910", club: "Sussex Revolution Velo Club" },
-  ////{ name: "James Di Rico", bc: "29982", club: "Sussex Revolution Velo Club" },
-  ////{ name: "Gemma Lewis", bc: "1128565", club: "Sussex Revolution Velo Club" },
-  ////{ name: "Joshua Dunne", bc: "219770", club: "Sussex Revolution Velo Club" }
+  { name: "James Di Rico", bc: "29982", club: "Sussex Revolution Velo Club" },
+  { name: "Gemma Lewis", bc: "1128565", club: "Sussex Revolution Velo Club" },
+  { name: "Joshua Dunne", bc: "219770", club: "Sussex Revolution Velo Club" }
 ];
 
 // Original endpoint for single racer data
