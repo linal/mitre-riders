@@ -196,7 +196,7 @@ app.post('/api/racers/add', express.json(), (req, res) => {
 
 // New endpoint to build cache for all racers
 app.post('/api/build-cache', async (req, res) => {
-  const { year } = req.body || req.query;
+  const { year, racerId } = req.body || req.query;
   
   if (!year) {
     return res.status(400).send("Missing year parameter");
@@ -205,7 +205,7 @@ app.post('/api/build-cache', async (req, res) => {
   const now = Date.now();
   const results = {
     success: true,
-    totalRacers: racers.length,
+    totalRacers: racerId ? 1 : racers.length,
     cached: 0,
     failed: 0,
     skipped: 0,
@@ -213,9 +213,17 @@ app.post('/api/build-cache', async (req, res) => {
   };
   
   try {
-    // Process each racer and build cache
-    for (const racer of racers) {
-      const racerId = racer.bc;
+    // If racerId is provided, only build cache for that racer
+    if (racerId) {
+      const racer = racers.find(r => r.bc === racerId);
+      
+      if (!racer) {
+        return res.status(404).json({ 
+          success: false, 
+          message: `Racer with ID ${racerId} not found` 
+        });
+      }
+      
       const cacheKey = `${racerId}_${year}`;
       const cacheFilePath = path.join(CACHE_DIR, `${cacheKey}.json`);
       
@@ -233,10 +241,9 @@ app.post('/api/build-cache', async (req, res) => {
         results.cached++;
         results.details.push({
           racerId,
-          name: racer.name,
+          name: result.name,
           status: 'cached'
         });
-        
       } catch (err) {
         results.failed++;
         results.details.push({
@@ -246,6 +253,42 @@ app.post('/api/build-cache', async (req, res) => {
           error: err.message
         });
         console.error(`Error building cache for ${racerId}_${year}:`, err.message);
+      }
+    } else {
+      // Process each racer and build cache
+      for (const racer of racers) {
+        const racerId = racer.bc;
+        const cacheKey = `${racerId}_${year}`;
+        const cacheFilePath = path.join(CACHE_DIR, `${cacheKey}.json`);
+        
+        try {
+          // Fetch data from BC API
+          const result = await fetchRacerData(racerId, year);
+          const cacheEntry = { data: result, timestamp: now };
+          
+          // Update memory cache
+          cache[cacheKey] = cacheEntry;
+          
+          // Write to disk cache
+          fs.writeFileSync(cacheFilePath, JSON.stringify(cacheEntry), 'utf8');
+          
+          results.cached++;
+          results.details.push({
+            racerId,
+            name: racer.name,
+            status: 'cached'
+          });
+          
+        } catch (err) {
+          results.failed++;
+          results.details.push({
+            racerId,
+            name: racer.name,
+            status: 'failed',
+            error: err.message
+          });
+          console.error(`Error building cache for ${racerId}_${year}:`, err.message);
+        }
       }
     }
     
