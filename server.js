@@ -394,6 +394,8 @@ async function fetchRacerData(person_id, year) {
   // Process regular points
   let regularRaceCount = 0;
   let regularPoints = 0;
+  let regionalPoints = 0;
+  let nationalPoints = 0;
   
   // Deduplicate races based on event ID in URL for regular points
   const regularTbodyStart = regularHtml.indexOf("<tbody>");
@@ -404,6 +406,34 @@ async function fetchRacerData(person_id, year) {
     const eventIdMatches = [...tbody.matchAll(/\/events\/details\/(\d+)\//g)];
     const uniqueEventIds = new Set(eventIdMatches.map(match => match[1]));
     regularRaceCount = uniqueEventIds.size;
+    
+    // Process each race to categorize points as regional or national
+    const rows = tbody.split("<tr>");
+    for (let i = 1; i < rows.length; i++) { // Skip first empty element
+      const row = rows[i];
+      const cells = row.split("<td>");
+      
+      // Check if we have enough cells and the points cell has a value
+      if (cells.length >= 6) {
+        // Extract category from the second cell
+        const categoryCell = cells[2];
+        const pointsCell = cells[5];
+        
+        // Extract points value
+        const pointsEndIndex = pointsCell.indexOf("</td>");
+        if (pointsEndIndex !== -1) {
+          const pointsValue = pointsCell.substring(0, pointsEndIndex).trim();
+          const points = isNaN(Number(pointsValue)) ? 0 : Number(pointsValue);
+          
+          // Categorize points based on race category
+          if (categoryCell.includes("National")) {
+            nationalPoints += points;
+          } else {
+            regionalPoints += points;
+          }
+        }
+      }
+    }
   }
 
   // Extract total points from <tfoot> for regular points
@@ -424,6 +454,8 @@ async function fetchRacerData(person_id, year) {
   // Process cyclocross points
   let cyclocrossRaceCount = 0;
   let cyclocrossPoints = 0;
+  let cyclocrossRegionalPoints = 0;
+  let cyclocrossNationalPoints = 0;
   
   // Deduplicate races based on event ID in URL for cyclocross points
   const cyclocrossTbodyStart = cyclocrossHtml.indexOf("<tbody>");
@@ -434,6 +466,34 @@ async function fetchRacerData(person_id, year) {
     const eventIdMatches = [...tbody.matchAll(/\/events\/details\/(\d+)\//g)];
     const uniqueEventIds = new Set(eventIdMatches.map(match => match[1]));
     cyclocrossRaceCount = uniqueEventIds.size;
+    
+    // Process each race to categorize points as regional or national
+    const rows = tbody.split("<tr>");
+    for (let i = 1; i < rows.length; i++) { // Skip first empty element
+      const row = rows[i];
+      const cells = row.split("<td>");
+      
+      // Check if we have enough cells and the points cell has a value
+      if (cells.length >= 6) {
+        // Extract category from the second cell
+        const categoryCell = cells[2];
+        const pointsCell = cells[5];
+        
+        // Extract points value
+        const pointsEndIndex = pointsCell.indexOf("</td>");
+        if (pointsEndIndex !== -1) {
+          const pointsValue = pointsCell.substring(0, pointsEndIndex).trim();
+          const points = isNaN(Number(pointsValue)) ? 0 : Number(pointsValue);
+          
+          // Categorize points based on race category
+          if (categoryCell.includes("National")) {
+            cyclocrossNationalPoints += points;
+          } else {
+            cyclocrossRegionalPoints += points;
+          }
+        }
+      }
+    }
   }
 
   // Extract total points from <tfoot> for cyclocross points
@@ -459,7 +519,13 @@ async function fetchRacerData(person_id, year) {
     cyclocrossPoints,
     roadAndTrackRaceCount: regularRaceCount,
     cyclocrossRaceCount,
-    category
+    category,
+    regionalPoints: regionalPoints + cyclocrossRegionalPoints,
+    nationalPoints: nationalPoints + cyclocrossNationalPoints,
+    roadRegionalPoints: regionalPoints,
+    roadNationalPoints: nationalPoints,
+    cxRegionalPoints: cyclocrossRegionalPoints,
+    cxNationalPoints: cyclocrossNationalPoints
   };
 }
 
