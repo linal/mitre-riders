@@ -2,7 +2,6 @@ import React from "react";
 
 export default function FilterControls({
   darkMode,
-  toggleDarkMode,
   year,
   setYear,
   loading,
@@ -21,19 +20,12 @@ export default function FilterControls({
     <div className={`p-4 rounded-lg mb-4 ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
       <div className="flex justify-between items-center mb-3">
         <h3 className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-700'}`}>Filter Options</h3>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center">
           <button
             onClick={handleClearFilters}
             className={`px-3 py-1 rounded text-xs font-medium ${darkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
           >
             Clear Filters
-          </button>
-          <button
-            onClick={toggleDarkMode}
-            className={`p-2 rounded-full ${darkMode ? 'bg-gray-700 text-yellow-300' : 'bg-gray-200 text-gray-800'}`}
-            aria-label="Toggle dark mode"
-          >
-            {darkMode ? '☀️' : '🌙'}
           </button>
         </div>
       </div>

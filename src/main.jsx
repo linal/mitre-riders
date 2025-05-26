@@ -11,7 +11,7 @@ import './index.css';
 // Create Theme Context
 export const ThemeContext = createContext();
 
-const Navigation = ({ darkMode }) => {
+const Navigation = ({ darkMode, toggleDarkMode }) => {
   const [showSettings, setShowSettings] = useState(false);
   
   const toggleSettings = () => {
@@ -40,6 +40,15 @@ const Navigation = ({ darkMode }) => {
           <Link to="/" className={`px-3 py-1 rounded text-sm ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
             Clubs
           </Link>
+          
+          {/* Dark mode toggle */}
+          <button
+            onClick={toggleDarkMode}
+            className={`p-2 rounded-full ${darkMode ? 'bg-gray-700 text-yellow-300' : 'bg-gray-200 text-gray-800'}`}
+            aria-label="Toggle dark mode"
+          >
+            {darkMode ? '☀️' : '🌙'}
+          </button>
           
           {/* Settings dropdown */}
           <div className="relative settings-container">
@@ -115,7 +124,7 @@ const App = () => {
     <ThemeContext.Provider value={{ darkMode, toggleDarkMode }}>
       <BrowserRouter>
         <div className={darkMode ? 'bg-gray-900 min-h-screen' : 'bg-gray-50 min-h-screen'}>
-          <Navigation darkMode={darkMode} />
+          <Navigation darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
           <Routes>
             <Route path="/" element={<ClubsList />} />
             <Route path="/clubs/:clubName/riders" element={<ClubRiders />} />
