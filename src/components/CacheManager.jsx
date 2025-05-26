@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext, useRef } from "react";
 import { ThemeContext } from "../main";
+import { Link } from "react-router-dom";
 
 export default function CacheManager() {
   const { darkMode } = useContext(ThemeContext);
@@ -211,6 +212,7 @@ export default function CacheManager() {
         <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-800'}`}>Cache Manager</h3>
         <p className={`text-sm leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
           Manage cached race data by year. View cache statistics and clear cache files when needed.
+          <Link to="/about" className="ml-1 text-blue-500 hover:underline">Learn more</Link> about the caching system.
         </p>
       </div>
 
