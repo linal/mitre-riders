@@ -100,8 +100,7 @@ export default function ClubSummary() {
         regionalPoints: 0,
         nationalPoints: 0
       },
-      categories: {},
-      clubs: {}
+      categories: {}
     };
 
     // Process each rider's data
@@ -147,19 +146,6 @@ export default function ClubSummary() {
       summary.categories[category].count++;
       summary.categories[category].points += rider.points || 0;
       summary.categories[category].races += rider.raceCount || 0;
-
-      // Clubs
-      const club = rider.club || 'Unknown';
-      if (!summary.clubs[club]) {
-        summary.clubs[club] = {
-          count: 0,
-          points: 0,
-          races: 0
-        };
-      }
-      summary.clubs[club].count++;
-      summary.clubs[club].points += rider.points || 0;
-      summary.clubs[club].races += rider.raceCount || 0;
     });
 
     setSummaryFunc(summary);
@@ -455,58 +441,6 @@ export default function ClubSummary() {
           </div>
         </div>
 
-
-
-        {/* Clubs breakdown */}
-        <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
-          <h3 className={`text-lg font-medium mb-3 ${darkMode ? 'text-white' : 'text-gray-800'}`}>Clubs</h3>
-          <div className="overflow-x-auto">
-            <table className={`min-w-full divide-y divide-gray-200 ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-              <thead className={darkMode ? 'bg-gray-700' : 'bg-gray-50'}>
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Club</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Riders</th>
-                  {showComparison && <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">vs Prev</th>}
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Races</th>
-                  {showComparison && <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">vs Prev</th>}
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Points</th>
-                  {showComparison && <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">vs Prev</th>}
-                </tr>
-              </thead>
-              <tbody className={`divide-y divide-gray-200 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                {Object.entries(summary.clubs)
-                  .sort((a, b) => b[1].points - a[1].points)
-                  .map(([club, data]) => {
-                    const prevYearClubData = prevYearSummary.clubs[club] || { count: 0, races: 0, points: 0 };
-                    return (
-                      <tr key={club}>
-                        <td className="px-6 py-4 whitespace-nowrap">{club}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">{data.count}</td>
-                        {showComparison && (
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {formatChange(calculateChange(data.count, prevYearClubData.count), data.count, prevYearClubData.count)}
-                          </td>
-                        )}
-                        <td className="px-6 py-4 whitespace-nowrap">{data.races}</td>
-                        {showComparison && (
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {formatChange(calculateChange(data.races, prevYearClubData.races), data.races, prevYearClubData.races)}
-                          </td>
-                        )}
-                        <td className="px-6 py-4 whitespace-nowrap">{data.points}</td>
-                        {showComparison && (
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {formatChange(calculateChange(data.points, prevYearClubData.points), data.points, prevYearClubData.points)}
-                          </td>
-                        )}
-                      </tr>
-                    );
-                  })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-        
         {/* Year-over-year comparison summary */}
         {showComparison && (
           <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
