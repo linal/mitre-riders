@@ -475,6 +475,63 @@ app.get('/api/clubs', (req, res) => {
   }
 });
 
+// Endpoint to get the entire clubs file
+app.get('/api/clubs-file', (req, res) => {
+  try {
+    if (fs.existsSync(CLUBS_FILE)) {
+      const clubsData = fs.readFileSync(CLUBS_FILE, 'utf8');
+      const clubs = JSON.parse(clubsData);
+      
+      res.json(clubs);
+    } else {
+      res.json({});
+    }
+  } catch (err) {
+    console.error(`Error fetching clubs file: ${err.message}`);
+    res.status(500).send("Failed to fetch clubs file");
+  }
+});
+
+// Endpoint to delete a club
+app.delete('/api/clubs/:clubName', (req, res) => {
+  try {
+    const { clubName } = req.params;
+    
+    if (!clubName) {
+      return res.status(400).json({ success: false, message: "Club name is required" });
+    }
+    
+    // Check if clubs file exists
+    if (!fs.existsSync(CLUBS_FILE)) {
+      return res.status(404).json({ success: false, message: "Clubs data not found" });
+    }
+    
+    // Read clubs data
+    const clubsData = fs.readFileSync(CLUBS_FILE, 'utf8');
+    const clubs = JSON.parse(clubsData);
+    
+    // Check if club exists
+    if (!clubs[clubName]) {
+      return res.status(404).json({ success: false, message: `Club '${clubName}' not found` });
+    }
+    
+    // Remove the club
+    delete clubs[clubName];
+    
+    // Write updated clubs data
+    fs.writeFileSync(CLUBS_FILE, JSON.stringify(clubs, null, 2), 'utf8');
+    
+    res.json({ 
+      success: true, 
+      message: `Club '${clubName}' removed successfully`,
+      remainingClubs: Object.keys(clubs).length
+    });
+  } catch (err) {
+    console.error(`Error removing club: ${err.message}`);
+    res.status(500).json({ success: false, message: "Failed to remove club" });
+  }
+});
+
 // Helper function to fetch and process racer data
 async function fetchRacerData(person_id, year) {
   // Fetch regular points (d=4)

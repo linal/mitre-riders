@@ -3,3 +3,8 @@ curl 'https://mitre-riders.fly.dev/api/build-cache' \
   -H 'accept-language: en-GB,en;q=0.9,en-US;q=0.8' \
   -H 'content-type: application/json' \
   --data-raw '{"year":"2025"}'
+
+# Delete a club
+curl -X DELETE 'https://mitre-riders.fly.dev/api/clubs/CLUB_NAME' \
+  -H 'accept: */*' \
+  -H 'content-type: application/json'

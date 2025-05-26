@@ -6,6 +6,7 @@ import CacheManager from './components/CacheManager';
 import AddRacer from './components/AddRacer';
 import ClubSummary from './components/ClubSummary';
 import ClubsList from './components/ClubsList';
+import ClubsManager from './components/ClubsManager';
 import About from './components/About';
 import './index.css';
 
@@ -85,6 +86,13 @@ const Navigation = ({ darkMode, toggleDarkMode }) => {
                 >
                   Add Racer
                 </Link>
+                <Link 
+                  to="/manage-clubs" 
+                  className={`block px-4 py-2 text-sm ${darkMode ? 'text-gray-200 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-100'}`}
+                  onClick={() => setShowSettings(false)}
+                >
+                  Manage Clubs
+                </Link>
               </div>
             )}
           </div>
@@ -135,6 +143,7 @@ const App = () => {
             <Route path="/clubs/:clubName/summary" element={<ClubSummary />} />
             <Route path="/cache" element={<CacheManager />} />
             <Route path="/add-racer" element={<AddRacer />} />
+            <Route path="/manage-clubs" element={<ClubsManager />} />
             <Route path="/about" element={<About />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
