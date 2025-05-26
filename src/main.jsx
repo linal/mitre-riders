@@ -1,7 +1,7 @@
 import React, { createContext, useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter, Routes, Route, Link, Navigate } from 'react-router-dom';
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { BrowserRouter, Routes, Route, Link, Navigate, useNavigate } from 'react-router-dom';
+import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
 import ClubRiders from './components/ClubRiders';
 import CacheManager from './components/CacheManager';
 import AddRacer from './components/AddRacer';
@@ -23,6 +23,7 @@ const Navigation = ({ darkMode, toggleDarkMode }) => {
   const [showSettings, setShowSettings] = useState(false);
   const auth = getAuth();
   const [user, setUser] = useState(auth.currentUser);
+  const navigate = useNavigate();
   
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -112,6 +113,19 @@ const Navigation = ({ darkMode, toggleDarkMode }) => {
                   >
                     Manage Clubs
                   </Link>
+                  <button 
+                    onClick={() => {
+                      setShowSettings(false);
+                      signOut(auth).then(() => {
+                        navigate('/login');
+                      }).catch((error) => {
+                        console.error('Error signing out:', error);
+                      });
+                    }}
+                    className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? 'text-gray-200 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-100'}`}
+                  >
+                    Logout
+                  </button>
                 </div>
               )}
             </div>

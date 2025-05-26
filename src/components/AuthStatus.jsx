@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getAuth, signOut, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 
 const AuthStatus = () => {
@@ -14,15 +14,6 @@ const AuthStatus = () => {
     return () => unsubscribe();
   }, [auth]);
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      navigate('/login');
-    } catch (error) {
-      console.error('Error signing out:', error);
-    }
-  };
-
   return (
     <div className="flex items-center">
       {user ? (
@@ -30,12 +21,6 @@ const AuthStatus = () => {
           <span className="text-sm mr-2">
             {user.displayName || user.email}
           </span>
-          <button
-            onClick={handleLogout}
-            className="text-sm bg-red-500 hover:bg-red-600 text-white py-1 px-2 rounded"
-          >
-            Logout
-          </button>
         </div>
       ) : (
         <button
