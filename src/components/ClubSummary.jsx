@@ -222,7 +222,8 @@ export default function ClubSummary() {
             )}
           </div>
           <p className={`text-sm leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-            This page provides a summary of rider data across all club members. View statistics by year, including total races, points, and breakdowns by discipline.
+            View statistics by year with year-over-year comparisons. See total races, points, and breakdowns by discipline.
+            <Link to="/about" className="ml-1 text-blue-500 hover:underline">Learn more</Link> about how this works.
           </p>
         </div>
 

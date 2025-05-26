@@ -171,9 +171,8 @@ export default function ClubRiders() {
           )}
         </div>
         <p className={`text-sm leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-          This tool displays British Cycling race data for club members. Data is fetched from the British Cycling Website 
-          when you select a year or click "Go". Results include both Road & Track and Cyclocross points and race counts. 
-          Data is cached for 24 hours to improve performance.
+          View British Cycling race data for {clubName ? decodeURIComponent(clubName) : 'club'} members. Filter and sort by various criteria.
+          <Link to="/about" className="ml-1 text-blue-500 hover:underline">Learn more</Link> about how this works.
         </p>
       </div>
       

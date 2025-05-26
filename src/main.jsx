@@ -6,6 +6,7 @@ import CacheManager from './components/CacheManager';
 import AddRacer from './components/AddRacer';
 import ClubSummary from './components/ClubSummary';
 import ClubsList from './components/ClubsList';
+import About from './components/About';
 import './index.css';
 
 // Create Theme Context
@@ -39,6 +40,9 @@ const Navigation = ({ darkMode, toggleDarkMode }) => {
         <div className="flex space-x-4 items-center">
           <Link to="/" className={`px-3 py-1 rounded text-sm ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
             Clubs
+          </Link>
+          <Link to="/about" className={`px-3 py-1 rounded text-sm ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
+            About
           </Link>
           
           {/* Dark mode toggle */}
@@ -131,6 +135,7 @@ const App = () => {
             <Route path="/clubs/:clubName/summary" element={<ClubSummary />} />
             <Route path="/cache" element={<CacheManager />} />
             <Route path="/add-racer" element={<AddRacer />} />
+            <Route path="/about" element={<About />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </div>
