@@ -3,6 +3,21 @@ const cors = require('cors');
 const fetch = require('node-fetch');
 const path = require('path');
 const fs = require('fs');
+// Firebase Admin SDK for server-side operations
+const { initializeApp } = require('firebase/app');
+
+// Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyBW72KiOT4TYXx8tbTQA2g1GjRMA4-yJ3k",
+  authDomain: "mitre-riders.firebaseapp.com",
+  projectId: "mitre-riders",
+  storageBucket: "mitre-riders.firebasestorage.app",
+  messagingSenderId: "701709492859",
+  appId: "1:701709492859:web:00f2529f28b096f94038de"
+};
+
+// Initialize Firebase
+const firebaseApp = initializeApp(firebaseConfig);
 
 const app = express();
 const PORT = process.env.PORT || 3001;

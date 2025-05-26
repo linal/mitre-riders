@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Link, Navigate } from 'react-router-dom';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import ClubRiders from './components/ClubRiders';
 import CacheManager from './components/CacheManager';
 import AddRacer from './components/AddRacer';
@@ -8,13 +9,27 @@ import ClubSummary from './components/ClubSummary';
 import ClubsList from './components/ClubsList';
 import ClubsManager from './components/ClubsManager';
 import About from './components/About';
+import Login from './components/Login';
+import RegisterUser from './components/RegisterUser';
+import ProtectedRoute from './components/ProtectedRoute';
+import AuthStatus from './components/AuthStatus';
 import './index.css';
+import './firebase'; // Import Firebase configuration
 
 // Create Theme Context
 export const ThemeContext = createContext();
 
 const Navigation = ({ darkMode, toggleDarkMode }) => {
   const [showSettings, setShowSettings] = useState(false);
+  const auth = getAuth();
+  const [user, setUser] = useState(auth.currentUser);
+  
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, [auth]);
   
   const toggleSettings = () => {
     setShowSettings(!showSettings);
@@ -55,47 +70,52 @@ const Navigation = ({ darkMode, toggleDarkMode }) => {
             {darkMode ? '☀️' : '🌙'}
           </button>
           
-          {/* Settings dropdown */}
-          <div className="relative settings-container">
-            <button 
-              onClick={toggleSettings}
-              className={`p-2 rounded-full ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-              aria-label="Settings"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-              </svg>
-            </button>
-            
-            {showSettings && (
-              <div 
-                className={`absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 z-10 ${darkMode ? 'bg-gray-700' : 'bg-white'} ring-1 ring-black ring-opacity-5 settings-container`}
-                role="menu"
+          {/* Auth status */}
+          <AuthStatus />
+          
+          {/* Settings dropdown - only show if user is logged in */}
+          {user && (
+            <div className="relative settings-container">
+              <button 
+                onClick={toggleSettings}
+                className={`p-2 rounded-full ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                aria-label="Settings"
               >
-                <Link 
-                  to="/cache" 
-                  className={`block px-4 py-2 text-sm ${darkMode ? 'text-gray-200 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-100'}`}
-                  onClick={() => setShowSettings(false)}
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                </svg>
+              </button>
+              
+              {showSettings && (
+                <div 
+                  className={`absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 z-10 ${darkMode ? 'bg-gray-700' : 'bg-white'} ring-1 ring-black ring-opacity-5 settings-container`}
+                  role="menu"
                 >
-                  Cache Manager
-                </Link>
-                <Link 
-                  to="/add-racer" 
-                  className={`block px-4 py-2 text-sm ${darkMode ? 'text-gray-200 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-100'}`}
-                  onClick={() => setShowSettings(false)}
-                >
-                  Add Racer
-                </Link>
-                <Link 
-                  to="/manage-clubs" 
-                  className={`block px-4 py-2 text-sm ${darkMode ? 'text-gray-200 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-100'}`}
-                  onClick={() => setShowSettings(false)}
-                >
-                  Manage Clubs
-                </Link>
-              </div>
-            )}
-          </div>
+                  <Link 
+                    to="/cache" 
+                    className={`block px-4 py-2 text-sm ${darkMode ? 'text-gray-200 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-100'}`}
+                    onClick={() => setShowSettings(false)}
+                  >
+                    Cache Manager
+                  </Link>
+                  <Link 
+                    to="/add-racer" 
+                    className={`block px-4 py-2 text-sm ${darkMode ? 'text-gray-200 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-100'}`}
+                    onClick={() => setShowSettings(false)}
+                  >
+                    Add Racer
+                  </Link>
+                  <Link 
+                    to="/manage-clubs" 
+                    className={`block px-4 py-2 text-sm ${darkMode ? 'text-gray-200 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-100'}`}
+                    onClick={() => setShowSettings(false)}
+                  >
+                    Manage Clubs
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </nav>
@@ -141,10 +161,24 @@ const App = () => {
             <Route path="/" element={<ClubsList />} />
             <Route path="/clubs/:clubName/riders" element={<ClubRiders />} />
             <Route path="/clubs/:clubName/summary" element={<ClubSummary />} />
-            <Route path="/cache" element={<CacheManager />} />
-            <Route path="/add-racer" element={<AddRacer />} />
-            <Route path="/manage-clubs" element={<ClubsManager />} />
+            <Route path="/cache" element={
+              <ProtectedRoute>
+                <CacheManager />
+              </ProtectedRoute>
+            } />
+            <Route path="/add-racer" element={
+              <ProtectedRoute>
+                <AddRacer />
+              </ProtectedRoute>
+            } />
+            <Route path="/manage-clubs" element={
+              <ProtectedRoute>
+                <ClubsManager />
+              </ProtectedRoute>
+            } />
             <Route path="/about" element={<About />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<RegisterUser />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </div>
