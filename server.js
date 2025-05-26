@@ -499,18 +499,39 @@ async function fetchRacerData(person_id, year) {
 
   // Extract club from the HTML
   let club = '';
-  const clubRegex = /<dd>Year End Club: <a[^>]*>([^<]+)<\/a>/;
-  const clubMatch = regularHtml.match(clubRegex);
-  if (clubMatch && clubMatch[1]) {
-    club = clubMatch[1].trim();
-  }
+  const currentYear = new Date().getFullYear().toString();
   
-  // If club not found, try current club
-  if (!club) {
+  if (year === currentYear) {
+    // For current year, use Current Club
     const currentClubRegex = /<dd>Current Club: <a[^>]*>([^<]+)<\/a>/;
     const currentClubMatch = regularHtml.match(currentClubRegex);
     if (currentClubMatch && currentClubMatch[1]) {
       club = currentClubMatch[1].trim();
+    }
+    
+    // If Current Club not found, fall back to Year End Club
+    if (!club) {
+      const yearEndClubRegex = /<dd>Year End Club: <a[^>]*>([^<]+)<\/a>/;
+      const yearEndClubMatch = regularHtml.match(yearEndClubRegex);
+      if (yearEndClubMatch && yearEndClubMatch[1]) {
+        club = yearEndClubMatch[1].trim();
+      }
+    }
+  } else {
+    // For other years, use Year End Club
+    const yearEndClubRegex = /<dd>Year End Club: <a[^>]*>([^<]+)<\/a>/;
+    const yearEndClubMatch = regularHtml.match(yearEndClubRegex);
+    if (yearEndClubMatch && yearEndClubMatch[1]) {
+      club = yearEndClubMatch[1].trim();
+    }
+    
+    // If Year End Club not found, fall back to Current Club
+    if (!club) {
+      const currentClubRegex = /<dd>Current Club: <a[^>]*>([^<]+)<\/a>/;
+      const currentClubMatch = regularHtml.match(currentClubRegex);
+      if (currentClubMatch && currentClubMatch[1]) {
+        club = currentClubMatch[1].trim();
+      }
     }
   }
 
@@ -644,16 +665,35 @@ async function fetchRacerData(person_id, year) {
 
   // If club is still not found, try to extract from cyclocross HTML
   if (!club) {
-    const cxClubRegex = /<dd>Year End Club: <a[^>]*>([^<]+)<\/a>/;
-    const cxClubMatch = cyclocrossHtml.match(cxClubRegex);
-    if (cxClubMatch && cxClubMatch[1]) {
-      club = cxClubMatch[1].trim();
-    } else {
-      // Try current club in cyclocross HTML
+    const currentYear = new Date().getFullYear().toString();
+    
+    if (year === currentYear) {
+      // For current year, use Current Club from cyclocross HTML
       const cxCurrentClubRegex = /<dd>Current Club: <a[^>]*>([^<]+)<\/a>/;
       const cxCurrentClubMatch = cyclocrossHtml.match(cxCurrentClubRegex);
       if (cxCurrentClubMatch && cxCurrentClubMatch[1]) {
         club = cxCurrentClubMatch[1].trim();
+      } else {
+        // Fall back to Year End Club
+        const cxYearEndClubRegex = /<dd>Year End Club: <a[^>]*>([^<]+)<\/a>/;
+        const cxYearEndClubMatch = cyclocrossHtml.match(cxYearEndClubRegex);
+        if (cxYearEndClubMatch && cxYearEndClubMatch[1]) {
+          club = cxYearEndClubMatch[1].trim();
+        }
+      }
+    } else {
+      // For other years, use Year End Club from cyclocross HTML
+      const cxYearEndClubRegex = /<dd>Year End Club: <a[^>]*>([^<]+)<\/a>/;
+      const cxYearEndClubMatch = cyclocrossHtml.match(cxYearEndClubRegex);
+      if (cxYearEndClubMatch && cxYearEndClubMatch[1]) {
+        club = cxYearEndClubMatch[1].trim();
+      } else {
+        // Fall back to Current Club
+        const cxCurrentClubRegex = /<dd>Current Club: <a[^>]*>([^<]+)<\/a>/;
+        const cxCurrentClubMatch = cyclocrossHtml.match(cxCurrentClubRegex);
+        if (cxCurrentClubMatch && cxCurrentClubMatch[1]) {
+          club = cxCurrentClubMatch[1].trim();
+        }
       }
     }
   }
