@@ -11,13 +11,10 @@ export default function FilterControls({
   setFilterText,
   sortKey,
   setSortKey,
-  clubFilter,
-  setClubFilter,
   raceTypeFilter,
   setRaceTypeFilter,
   categoryFilter,
   setCategoryFilter,
-  uniqueClubs,
   handleClearFilters
 }) {
   return (
@@ -106,20 +103,6 @@ export default function FilterControls({
             <option value="cxRegional">CX Regional Pts</option>
             <option value="cxNational">CX National Pts</option>
             <option value="category">Category</option>
-          </select>
-        </div>
-        
-        <div className="flex items-center">
-          <label className={`text-sm mr-2 w-12 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Club:</label>
-          <select
-            value={clubFilter}
-            onChange={(e) => setClubFilter(e.target.value)}
-            className={`border rounded px-2 py-1.5 text-sm w-full ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white border-gray-300'}`}
-          >
-            <option value="">All Clubs</option>
-            {uniqueClubs.map(club => (
-              <option key={club} value={club}>{club}</option>
-            ))}
           </select>
         </div>
         

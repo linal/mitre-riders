@@ -1,54 +1,22 @@
 import React, { useState, useEffect, useContext } from "react";
+import { useParams, useSearchParams, Link } from "react-router-dom";
 import LoadingOverlay from "react-loading-overlay-ts";
 import { ThemeContext } from "../main";
 import RiderCard from "./RiderCard";
 import FilterControls from "./FilterControls";
 
-// Parse URL query parameters
-function getQueryParams() {
-  const params = new URLSearchParams(window.location.search);
-  return {
-    year: params.get("year") || "2025",
-    sort: params.get("sort") || "name",
-    filter: params.get("filter") || "",
-    club: params.get("club") || "",
-    raceType: params.get("raceType") || "all",
-    category: params.get("category") || ""
-  };
-}
-
-// Update URL with current filter state
-function updateQueryParams(params) {
-  const url = new URL(window.location);
-  
-  // Clear existing params
-  url.search = "";
-  
-  // Add non-default params
-  if (params.year !== "2025") url.searchParams.set("year", params.year);
-  if (params.sort !== "name") url.searchParams.set("sort", params.sort);
-  if (params.filter) url.searchParams.set("filter", params.filter);
-  if (params.club) url.searchParams.set("club", params.club);
-  if (params.raceType !== "all") url.searchParams.set("raceType", params.raceType);
-  if (params.category) url.searchParams.set("category", params.category);
-  
-  // Update URL without reloading page
-  window.history.replaceState({}, "", url);
-}
-
 export default function ClubRiders() {
-  const queryParams = getQueryParams();
+  const { clubName } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { darkMode, toggleDarkMode } = useContext(ThemeContext);
-  const [year, setYear] = useState(queryParams.year);
+  const [year, setYear] = useState(searchParams.get("year") || "2025");
   const [data, setData] = useState({});
   const [loading, setLoading] = useState(true);
-  const [sortKey, setSortKey] = useState(queryParams.sort);
-  const [filterText, setFilterText] = useState(queryParams.filter);
-  const [clubFilter, setClubFilter] = useState(queryParams.club);
-  const [raceTypeFilter, setRaceTypeFilter] = useState(queryParams.raceType);
-  const [categoryFilter, setCategoryFilter] = useState(queryParams.category);
+  const [sortKey, setSortKey] = useState(searchParams.get("sort") || "name");
+  const [filterText, setFilterText] = useState(searchParams.get("filter") || "");
+  const [raceTypeFilter, setRaceTypeFilter] = useState(searchParams.get("raceType") || "all");
+  const [categoryFilter, setCategoryFilter] = useState(searchParams.get("category") || "");
   const [uniqueClubs, setUniqueClubs] = useState([]);
-  // Using hardcoded categories instead of dynamic ones
 
   const fetchRaceData = async () => {
     setLoading(true);
@@ -65,8 +33,6 @@ export default function ClubRiders() {
       // Extract unique clubs from the data and sort alphabetically
       const clubs = new Set(Object.values(allData).map(racer => racer.club));
       setUniqueClubs([...clubs].sort());
-      
-      // We're using hardcoded categories, so no need to extract them from data
     } catch (error) {
       console.error("Error fetching race data:", error);
     } finally {
@@ -76,27 +42,40 @@ export default function ClubRiders() {
   
   const handleClearFilters = () => {
     setFilterText("");
-    setClubFilter("");
     setCategoryFilter("");
     setRaceTypeFilter("all");
     setSortKey("name");
+    
+    // Update URL params
+    const params = new URLSearchParams();
+    if (year !== "2025") {
+      params.set("year", year);
+    }
+    setSearchParams(params);
   };
   
   // Update URL when filters change
   useEffect(() => {
-    updateQueryParams({ year, sort: sortKey, filter: filterText, club: clubFilter, raceType: raceTypeFilter, category: categoryFilter });
-  }, [year, sortKey, filterText, clubFilter, raceTypeFilter, categoryFilter]);
+    const params = new URLSearchParams();
+    if (year !== "2025") params.set("year", year);
+    if (sortKey !== "name") params.set("sort", sortKey);
+    if (filterText) params.set("filter", filterText);
+    if (raceTypeFilter !== "all") params.set("raceType", raceTypeFilter);
+    if (categoryFilter) params.set("category", categoryFilter);
+    setSearchParams(params);
+  }, [year, sortKey, filterText, raceTypeFilter, categoryFilter, setSearchParams]);
   
-  // Fetch data when year changes
+  // Fetch data when year or clubName changes
   useEffect(() => {
     fetchRaceData();
-  }, [year]);
+  }, [year, clubName]);
 
   // Process and filter the data
   const racerEntries = Object.entries(data);
   const sortedFilteredRacers = racerEntries
     .filter(([_, racer]) => racer.name && racer.name.toLowerCase().includes(filterText.toLowerCase()))
-    .filter(([_, racer]) => clubFilter === "" || racer.club === clubFilter)
+    // Filter by club from URL parameter
+    .filter(([_, racer]) => !clubName || racer.club === decodeURIComponent(clubName))
     .filter(([_, racer]) => {
       if (categoryFilter === "") return true;
       if (categoryFilter === "unlicensed") return !racer.category;
@@ -179,26 +158,26 @@ export default function ClubRiders() {
       
       <div className={`border-l-4 border-blue-600 rounded shadow-md p-4 mb-6 mx-2 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
         <div className="flex justify-between items-center mb-2">
-          <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-800'}`}>Club Riders</h3>
+          <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+            {clubName ? `${decodeURIComponent(clubName)} - Riders` : 'Club Riders'}
+          </h3>
+          {clubName && (
+            <Link 
+              to={`/clubs/${clubName}/summary`}
+              className={`px-3 py-1 rounded text-sm ${darkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
+            >
+              View Summary
+            </Link>
+          )}
         </div>
         <p className={`text-sm leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
           This tool displays British Cycling race data for club members. Data is fetched from the British Cycling Website 
           when you select a year or click "Go". Results include both Road & Track and Cyclocross points and race counts. 
-          Data is cached for 24 hours to improve performance. The server filters out duplicate race entries by extracting 
-          unique event IDs from the HTML response, ensuring each race is only counted once even if a rider participated in 
-          multiple events within the same race.
-          <br /><strong>Note: All data is pulled directly from the British Cycling website, so any inaccuracies there will be reflected here.</strong>
-          <br />
-          <a href="https://github.com/linal/mitre-riders" target="_blank" className="text-blue-500 hover:underline inline-flex items-center">
-            <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-            </svg>
-            GitHub Repository
-          </a>
+          Data is cached for 24 hours to improve performance.
         </p>
       </div>
       
-      {/* Filter controls - Now using the FilterControls component */}
+      {/* Filter controls - Now using the FilterControls component but without club filter */}
       <FilterControls 
         darkMode={darkMode}
         toggleDarkMode={toggleDarkMode}
@@ -210,13 +189,13 @@ export default function ClubRiders() {
         setFilterText={setFilterText}
         sortKey={sortKey}
         setSortKey={setSortKey}
-        clubFilter={clubFilter}
-        setClubFilter={setClubFilter}
+        clubFilter={null} // Not used anymore
+        setClubFilter={null} // Not used anymore
         raceTypeFilter={raceTypeFilter}
         setRaceTypeFilter={setRaceTypeFilter}
         categoryFilter={categoryFilter}
         setCategoryFilter={setCategoryFilter}
-        uniqueClubs={uniqueClubs}
+        uniqueClubs={[]} // Not used anymore
         handleClearFilters={handleClearFilters}
       />
 

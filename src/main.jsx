@@ -40,12 +40,6 @@ const Navigation = ({ darkMode }) => {
           <Link to="/" className={`px-3 py-1 rounded text-sm ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
             Clubs
           </Link>
-          <Link to="/club-riders" className={`px-3 py-1 rounded text-sm ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
-            Club Riders
-          </Link>
-          <Link to="/club-summary" className={`px-3 py-1 rounded text-sm ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
-            Club Summary
-          </Link>
           
           {/* Settings dropdown */}
           <div className="relative settings-container">
@@ -124,10 +118,10 @@ const App = () => {
           <Navigation darkMode={darkMode} />
           <Routes>
             <Route path="/" element={<ClubsList />} />
-            <Route path="/club-riders" element={<ClubRiders />} />
+            <Route path="/clubs/:clubName/riders" element={<ClubRiders />} />
+            <Route path="/clubs/:clubName/summary" element={<ClubSummary />} />
             <Route path="/cache" element={<CacheManager />} />
             <Route path="/add-racer" element={<AddRacer />} />
-            <Route path="/club-summary" element={<ClubSummary />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </div>

@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useContext } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams, Link } from "react-router-dom";
 import LoadingOverlay from "react-loading-overlay-ts";
 import { ThemeContext } from "../main";
 
 export default function ClubSummary() {
   const { darkMode } = useContext(ThemeContext);
+  const { clubName } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const [year, setYear] = useState(searchParams.get("year") || new Date().getFullYear().toString());
   const [data, setData] = useState({});
   const [prevYearData, setPrevYearData] = useState({});
   const [loading, setLoading] = useState(true);
-  const [clubFilter, setClubFilter] = useState(searchParams.get("club") || "");
   const [showComparison, setShowComparison] = useState(true);
   const [summary, setSummary] = useState({
     totalRiders: 0,
@@ -112,8 +112,8 @@ export default function ClubSummary() {
 
     // Process each rider's data
     Object.values(data)
-      // Apply club filter if set
-      .filter(rider => !clubFilter || rider.club === clubFilter)
+      // Apply club filter if clubName is provided
+      .filter(rider => !clubName || rider.club === decodeURIComponent(clubName))
       .forEach(rider => {
       // Count active riders (those with at least one race)
       if (rider.raceCount > 0) {
@@ -187,36 +187,19 @@ export default function ClubSummary() {
 
   useEffect(() => {
     fetchRaceData();
-  }, [year]);
+  }, [year, clubName]);
 
-  // Recalculate summary when club filter changes
-  useEffect(() => {
-    if (Object.keys(data).length > 0) {
-      calculateSummary(data, setSummary);
-    }
-    if (Object.keys(prevYearData).length > 0) {
-      calculateSummary(prevYearData, setPrevYearSummary);
-    }
-  }, [clubFilter]);
-
-  // Update URL when filters change
+  // Update URL when year changes
   useEffect(() => {
     const params = new URLSearchParams();
     if (year !== new Date().getFullYear().toString()) {
       params.set("year", year);
     }
-    if (clubFilter) {
-      params.set("club", clubFilter);
-    }
     setSearchParams(params);
-  }, [year, clubFilter, setSearchParams]);
+  }, [year, setSearchParams]);
 
   const handleYearChange = (e) => {
     setYear(e.target.value);
-  };
-  
-  const handleClubFilterChange = (e) => {
-    setClubFilter(e.target.value);
   };
   
   const toggleComparison = () => {
@@ -248,15 +231,23 @@ export default function ClubSummary() {
         <div className={`border-l-4 border-blue-600 rounded shadow-md p-4 mb-6 mx-2 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
           <div className="flex justify-between items-center mb-2">
             <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-              Club Summary {clubFilter && `- ${clubFilter}`}
+              Club Summary {clubName && `- ${decodeURIComponent(clubName)}`}
             </h3>
+            {clubName && (
+              <Link 
+                to={`/clubs/${clubName}/riders`}
+                className={`px-3 py-1 rounded text-sm ${darkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
+              >
+                View Riders
+              </Link>
+            )}
           </div>
           <p className={`text-sm leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-            This page provides a summary of rider data across all club members. View statistics by year, including total races, points, and breakdowns by discipline. Use the club filter to focus on specific clubs.
+            This page provides a summary of rider data across all club members. View statistics by year, including total races, points, and breakdowns by discipline.
           </p>
         </div>
 
-        {/* Year and club selector */}
+        {/* Year selector */}
         <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
           <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
             <div className="flex-1">
@@ -276,24 +267,6 @@ export default function ClubSummary() {
                 <option value="2023">2023</option>
                 <option value="2022">2022</option>
                 <option value="2021">2021</option>
-              </select>
-            </div>
-            <div className="flex-1">
-              <label htmlFor="club" className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                Filter by Club
-              </label>
-              <select
-                id="club"
-                value={clubFilter}
-                onChange={handleClubFilterChange}
-                className={`mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md ${
-                  darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white'
-                }`}
-              >
-                <option value="">All Clubs</option>
-                {Object.keys(summary.clubs).sort().map(club => (
-                  <option key={club} value={club}>{club}</option>
-                ))}
               </select>
             </div>
             <div className="flex-shrink-0 self-end flex space-x-2">
