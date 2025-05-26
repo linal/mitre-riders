@@ -556,38 +556,43 @@ async function fetchRacerData(person_id, year) {
 
   // Extract club from the HTML
   let club = '';
+  let clubId = '';
   const currentYear = new Date().getFullYear().toString();
   
   if (year === currentYear) {
     // For current year, use Current Club
-    const currentClubRegex = /<dd>Current Club: <a[^>]*>([^<]+)<\/a>/;
+    const currentClubRegex = /<dd>Current Club: <a[^>]*href="\/clubpoints\/\?club_id=(\d+)[^"]*">([^<]+)<\/a>/;
     const currentClubMatch = regularHtml.match(currentClubRegex);
-    if (currentClubMatch && currentClubMatch[1]) {
-      club = currentClubMatch[1].trim();
+    if (currentClubMatch && currentClubMatch[2]) {
+      club = currentClubMatch[2].trim();
+      clubId = currentClubMatch[1];
     }
     
     // If Current Club not found, fall back to Year End Club
     if (!club) {
-      const yearEndClubRegex = /<dd>Year End Club: <a[^>]*>([^<]+)<\/a>/;
+      const yearEndClubRegex = /<dd>Year End Club: <a[^>]*href="\/clubpoints\/\?club_id=(\d+)[^"]*">([^<]+)<\/a>/;
       const yearEndClubMatch = regularHtml.match(yearEndClubRegex);
-      if (yearEndClubMatch && yearEndClubMatch[1]) {
-        club = yearEndClubMatch[1].trim();
+      if (yearEndClubMatch && yearEndClubMatch[2]) {
+        club = yearEndClubMatch[2].trim();
+        clubId = yearEndClubMatch[1];
       }
     }
   } else {
     // For other years, use Year End Club
-    const yearEndClubRegex = /<dd>Year End Club: <a[^>]*>([^<]+)<\/a>/;
+    const yearEndClubRegex = /<dd>Year End Club: <a[^>]*href="\/clubpoints\/\?club_id=(\d+)[^"]*">([^<]+)<\/a>/;
     const yearEndClubMatch = regularHtml.match(yearEndClubRegex);
-    if (yearEndClubMatch && yearEndClubMatch[1]) {
-      club = yearEndClubMatch[1].trim();
+    if (yearEndClubMatch && yearEndClubMatch[2]) {
+      club = yearEndClubMatch[2].trim();
+      clubId = yearEndClubMatch[1];
     }
     
     // If Year End Club not found, fall back to Current Club
     if (!club) {
-      const currentClubRegex = /<dd>Current Club: <a[^>]*>([^<]+)<\/a>/;
+      const currentClubRegex = /<dd>Current Club: <a[^>]*href="\/clubpoints\/\?club_id=(\d+)[^"]*">([^<]+)<\/a>/;
       const currentClubMatch = regularHtml.match(currentClubRegex);
-      if (currentClubMatch && currentClubMatch[1]) {
-        club = currentClubMatch[1].trim();
+      if (currentClubMatch && currentClubMatch[2]) {
+        club = currentClubMatch[2].trim();
+        clubId = currentClubMatch[1];
       }
     }
   }
@@ -726,30 +731,34 @@ async function fetchRacerData(person_id, year) {
     
     if (year === currentYear) {
       // For current year, use Current Club from cyclocross HTML
-      const cxCurrentClubRegex = /<dd>Current Club: <a[^>]*>([^<]+)<\/a>/;
+      const cxCurrentClubRegex = /<dd>Current Club: <a[^>]*href="\/clubpoints\/\?club_id=(\d+)[^"]*">([^<]+)<\/a>/;
       const cxCurrentClubMatch = cyclocrossHtml.match(cxCurrentClubRegex);
-      if (cxCurrentClubMatch && cxCurrentClubMatch[1]) {
-        club = cxCurrentClubMatch[1].trim();
+      if (cxCurrentClubMatch && cxCurrentClubMatch[2]) {
+        club = cxCurrentClubMatch[2].trim();
+        clubId = cxCurrentClubMatch[1];
       } else {
         // Fall back to Year End Club
-        const cxYearEndClubRegex = /<dd>Year End Club: <a[^>]*>([^<]+)<\/a>/;
+        const cxYearEndClubRegex = /<dd>Year End Club: <a[^>]*href="\/clubpoints\/\?club_id=(\d+)[^"]*">([^<]+)<\/a>/;
         const cxYearEndClubMatch = cyclocrossHtml.match(cxYearEndClubRegex);
-        if (cxYearEndClubMatch && cxYearEndClubMatch[1]) {
-          club = cxYearEndClubMatch[1].trim();
+        if (cxYearEndClubMatch && cxYearEndClubMatch[2]) {
+          club = cxYearEndClubMatch[2].trim();
+          clubId = cxYearEndClubMatch[1];
         }
       }
     } else {
       // For other years, use Year End Club from cyclocross HTML
-      const cxYearEndClubRegex = /<dd>Year End Club: <a[^>]*>([^<]+)<\/a>/;
+      const cxYearEndClubRegex = /<dd>Year End Club: <a[^>]*href="\/clubpoints\/\?club_id=(\d+)[^"]*">([^<]+)<\/a>/;
       const cxYearEndClubMatch = cyclocrossHtml.match(cxYearEndClubRegex);
-      if (cxYearEndClubMatch && cxYearEndClubMatch[1]) {
-        club = cxYearEndClubMatch[1].trim();
+      if (cxYearEndClubMatch && cxYearEndClubMatch[2]) {
+        club = cxYearEndClubMatch[2].trim();
+        clubId = cxYearEndClubMatch[1];
       } else {
         // Fall back to Current Club
-        const cxCurrentClubRegex = /<dd>Current Club: <a[^>]*>([^<]+)<\/a>/;
+        const cxCurrentClubRegex = /<dd>Current Club: <a[^>]*href="\/clubpoints\/\?club_id=(\d+)[^"]*">([^<]+)<\/a>/;
         const cxCurrentClubMatch = cyclocrossHtml.match(cxCurrentClubRegex);
-        if (cxCurrentClubMatch && cxCurrentClubMatch[1]) {
-          club = cxCurrentClubMatch[1].trim();
+        if (cxCurrentClubMatch && cxCurrentClubMatch[2]) {
+          club = cxCurrentClubMatch[2].trim();
+          clubId = cxCurrentClubMatch[1];
         }
       }
     }
@@ -770,8 +779,8 @@ async function fetchRacerData(person_id, year) {
     }
   }
 
-  // Store club information in clubs cache file if club is found
-  if (club) {
+  // We no longer add members to clubs, but we still want to store club ID if found
+  if (club && clubId) {
     try {
       let clubs = {};
       
@@ -781,14 +790,11 @@ async function fetchRacerData(person_id, year) {
         clubs = JSON.parse(clubsData);
       }
       
-      // Add or update club entry
+      // Add or update club entry with ID but don't modify members
       if (!clubs[club]) {
-        clubs[club] = { members: [] };
-      }
-      
-      // Add member if not already in the list
-      if (!clubs[club].members.includes(person_id)) {
-        clubs[club].members.push(person_id);
+        clubs[club] = { id: clubId, members: [] };
+      } else if (!clubs[club].id) {
+        clubs[club].id = clubId;
       }
       
       // Write updated clubs data
@@ -809,6 +815,7 @@ async function fetchRacerData(person_id, year) {
     category,
     name,
     club,
+    clubId,
     regionalPoints: regionalPoints + cyclocrossRegionalPoints,
     nationalPoints: nationalPoints + cyclocrossNationalPoints,
     roadRegionalPoints: regionalPoints,
