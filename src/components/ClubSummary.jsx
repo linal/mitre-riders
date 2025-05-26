@@ -13,10 +13,8 @@ export default function ClubSummary() {
   const [loading, setLoading] = useState(true);
   const [showComparison, setShowComparison] = useState(true);
   const [summary, setSummary] = useState({
-    totalRiders: 0,
     activeRiders: 0,
     totalRaces: 0,
-    totalPoints: 0,
     roadAndTrack: {
       riders: 0,
       races: 0,
@@ -35,10 +33,8 @@ export default function ClubSummary() {
     clubs: {}
   });
   const [prevYearSummary, setPrevYearSummary] = useState({
-    totalRiders: 0,
     activeRiders: 0,
     totalRaces: 0,
-    totalPoints: 0,
     roadAndTrack: {
       riders: 0,
       races: 0,
@@ -88,10 +84,8 @@ export default function ClubSummary() {
 
   const calculateSummary = (data, setSummaryFunc) => {
     const summary = {
-      totalRiders: Object.keys(data).length,
       activeRiders: 0,
       totalRaces: 0,
-      totalPoints: 0,
       roadAndTrack: {
         riders: 0,
         races: 0,
@@ -122,7 +116,6 @@ export default function ClubSummary() {
 
       // Total races and points
       summary.totalRaces += rider.raceCount || 0;
-      summary.totalPoints += rider.points || 0;
 
       // Road & Track stats
       if (rider.roadAndTrackRaceCount > 0) {
@@ -305,18 +298,7 @@ export default function ClubSummary() {
               </div>
             )}
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-white'} shadow-sm`}>
-              <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Total Riders</div>
-              <div className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                {summary.totalRiders}
-                {showComparison && (
-                  <span className="ml-2 text-sm">
-                    {formatChange(calculateChange(summary.totalRiders, prevYearSummary.totalRiders), summary.totalRiders, prevYearSummary.totalRiders)}
-                  </span>
-                )}
-              </div>
-            </div>
+          <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
             <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-white'} shadow-sm`}>
               <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Active Riders</div>
               <div className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
@@ -335,17 +317,6 @@ export default function ClubSummary() {
                 {showComparison && (
                   <span className="ml-2 text-sm">
                     {formatChange(calculateChange(summary.totalRaces, prevYearSummary.totalRaces), summary.totalRaces, prevYearSummary.totalRaces)}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-white'} shadow-sm`}>
-              <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Total Points</div>
-              <div className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                {summary.totalPoints}
-                {showComparison && (
-                  <span className="ml-2 text-sm">
-                    {formatChange(calculateChange(summary.totalPoints, prevYearSummary.totalPoints), summary.totalPoints, prevYearSummary.totalPoints)}
                   </span>
                 )}
               </div>
@@ -554,10 +525,6 @@ export default function ClubSummary() {
                 <li>
                   Total races: {summary.totalRaces} vs {prevYearSummary.totalRaces} 
                   ({formatChange(calculateChange(summary.totalRaces, prevYearSummary.totalRaces), summary.totalRaces, prevYearSummary.totalRaces)})
-                </li>
-                <li>
-                  Total points: {summary.totalPoints} vs {prevYearSummary.totalPoints} 
-                  ({formatChange(calculateChange(summary.totalPoints, prevYearSummary.totalPoints), summary.totalPoints, prevYearSummary.totalPoints)})
                 </li>
                 <li>
                   Road & Track points: {summary.roadAndTrack.points} vs {prevYearSummary.roadAndTrack.points} 
