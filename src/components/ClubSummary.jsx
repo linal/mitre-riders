@@ -484,74 +484,7 @@ export default function ClubSummary() {
           </div>
         </div>
 
-        {/* Categories breakdown */}
-        <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
-          <h3 className={`text-lg font-medium mb-3 ${darkMode ? 'text-white' : 'text-gray-800'}`}>Categories</h3>
-          <div className="overflow-x-auto">
-            <table className={`min-w-full divide-y divide-gray-200 ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-              <thead className={darkMode ? 'bg-gray-700' : 'bg-gray-50'}>
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Category</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Riders</th>
-                  {showComparison && <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">vs Prev</th>}
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Races</th>
-                  {showComparison && <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">vs Prev</th>}
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Points</th>
-                  {showComparison && <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">vs Prev</th>}
-                </tr>
-              </thead>
-              <tbody className={`divide-y divide-gray-200 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                {Object.entries(summary.categories)
-                  .sort((a, b) => {
-                    // Sort categories with "1st" first, then "2nd", etc.
-                    const categoryOrder = {
-                      "1st": 1,
-                      "2nd": 2,
-                      "3rd": 3,
-                      "4th": 4,
-                      "Unlicensed": 5
-                    };
-                    
-                    const aOrder = Object.keys(categoryOrder).find(key => a[0].includes(key)) 
-                      ? categoryOrder[Object.keys(categoryOrder).find(key => a[0].includes(key))]
-                      : 6;
-                    
-                    const bOrder = Object.keys(categoryOrder).find(key => b[0].includes(key))
-                      ? categoryOrder[Object.keys(categoryOrder).find(key => b[0].includes(key))]
-                      : 6;
-                    
-                    return aOrder - bOrder;
-                  })
-                  .map(([category, data]) => {
-                    const prevYearCategoryData = prevYearSummary.categories[category] || { count: 0, races: 0, points: 0 };
-                    return (
-                      <tr key={category}>
-                        <td className="px-6 py-4 whitespace-nowrap">{category}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">{data.count}</td>
-                        {showComparison && (
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {formatChange(calculateChange(data.count, prevYearCategoryData.count), data.count, prevYearCategoryData.count)}
-                          </td>
-                        )}
-                        <td className="px-6 py-4 whitespace-nowrap">{data.races}</td>
-                        {showComparison && (
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {formatChange(calculateChange(data.races, prevYearCategoryData.races), data.races, prevYearCategoryData.races)}
-                          </td>
-                        )}
-                        <td className="px-6 py-4 whitespace-nowrap">{data.points}</td>
-                        {showComparison && (
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {formatChange(calculateChange(data.points, prevYearCategoryData.points), data.points, prevYearCategoryData.points)}
-                          </td>
-                        )}
-                      </tr>
-                    );
-                  })}
-              </tbody>
-            </table>
-          </div>
-        </div>
+
 
         {/* Clubs breakdown */}
         <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
