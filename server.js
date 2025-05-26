@@ -242,6 +242,33 @@ app.post('/api/racers/add', verifyToken, (req, res) => {
   }
 });
 
+// Endpoint to remove a racer by BC number - PROTECTED
+app.delete('/api/racers/:bc', verifyToken, (req, res) => {
+  try {
+    const { bc } = req.params;
+    
+    if (!bc) {
+      return res.status(400).json({ message: "Missing BC number" });
+    }
+    
+    // Check if BC number exists
+    const initialLength = racers.length;
+    racers = racers.filter(racer => racer.bc !== bc);
+    
+    if (racers.length === initialLength) {
+      return res.status(404).json({ message: "BC number not found" });
+    }
+    
+    // Save to file
+    fs.writeFileSync(RACERS_FILE, JSON.stringify(racers, null, 2), 'utf8');
+    
+    res.json({ success: true, bc, count: racers.length });
+  } catch (err) {
+    console.error(`Error removing racer: ${err.message}`);
+    res.status(500).json({ message: "Failed to remove racer" });
+  }
+});
+
 // New endpoint to build cache for all racers - PROTECTED
 app.post('/api/build-cache', verifyToken, async (req, res) => {
   const { year, racerId } = req.body || req.query;

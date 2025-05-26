@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route, Link, Navigate, useNavigate } from 'react
 import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
 import ClubRiders from './components/ClubRiders';
 import CacheManager from './components/CacheManager';
-import AddRacer from './components/AddRacer';
+import ManageRiders from './components/ManageRiders';
 import ClubSummary from './components/ClubSummary';
 import ClubsList from './components/ClubsList';
 import ClubsManager from './components/ClubsManager';
@@ -100,11 +100,11 @@ const Navigation = ({ darkMode, toggleDarkMode }) => {
                     Cache Manager
                   </Link>
                   <Link 
-                    to="/add-racer" 
+                    to="/manage-riders" 
                     className={`block px-4 py-2 text-sm ${darkMode ? 'text-gray-200 hover:bg-gray-600' : 'text-gray-700 hover:bg-gray-100'}`}
                     onClick={() => setShowSettings(false)}
                   >
-                    Add Racer
+                    Manage Riders
                   </Link>
                   <Link 
                     to="/manage-clubs" 
@@ -180,9 +180,9 @@ const App = () => {
                 <CacheManager />
               </ProtectedRoute>
             } />
-            <Route path="/add-racer" element={
+            <Route path="/manage-riders" element={
               <ProtectedRoute>
-                <AddRacer />
+                <ManageRiders />
               </ProtectedRoute>
             } />
             <Route path="/manage-clubs" element={
