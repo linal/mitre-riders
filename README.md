@@ -1,4 +1,4 @@
-# BC Points App
+# British Cycling Club Viewer
 
 A web application for tracking and displaying British Cycling race points for riders. This app allows users to view race points across different disciplines (Road & Track, Cyclocross) and filter/sort riders by various criteria.
 
@@ -32,7 +32,7 @@ A web application for tracking and displaying British Cycling race points for ri
 1. Clone the repository
    ```
    git clone https://github.com/linal/mitre-riders.git
-   cd bc-points-app
+   cd british-cycling-club-viewer
    ```
 
 2. Install dependencies
@@ -69,8 +69,8 @@ A web application for tracking and displaying British Cycling race points for ri
 The application includes a Dockerfile for containerized deployment:
 
 ```
-docker build -t bc-points-app .
-docker run -p 3000:3000 bc-points-app
+docker build -t british-cycling-club-viewer .
+docker run -p 3000:3000 british-cycling-club-viewer
 ```
 
 ## Deployment to Fly.io

@@ -35,7 +35,7 @@ const Navigation = ({ darkMode, toggleDarkMode }) => {
   return (
     <nav className={`px-4 py-3 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white border-b'}`}>
       <div className="container mx-auto flex items-center justify-between">
-        <div className="font-bold text-lg">BC Points App</div>
+        <div className="font-bold text-lg">British Cycling Club Viewer</div>
         <div className="flex space-x-4 items-center">
           <Link to="/" className={`px-3 py-1 rounded text-sm ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
             Clubs
