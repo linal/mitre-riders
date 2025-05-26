@@ -1,7 +1,7 @@
 import React, { createContext, useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Link, Navigate } from 'react-router-dom';
-import RaceChecker from './components/RaceChecker';
+import ClubRiders from './components/ClubRiders';
 import CacheManager from './components/CacheManager';
 import AddRacer from './components/AddRacer';
 import ClubSummary from './components/ClubSummary';
@@ -37,7 +37,7 @@ const Navigation = ({ darkMode }) => {
         <div className="font-bold text-lg">BC Points App</div>
         <div className="flex space-x-4 items-center">
           <Link to="/" className={`px-3 py-1 rounded text-sm ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
-            Race Checker
+            Club Riders
           </Link>
           <Link to="/club-summary" className={`px-3 py-1 rounded text-sm ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
             Club Summary
@@ -119,7 +119,7 @@ const App = () => {
         <div className={darkMode ? 'bg-gray-900 min-h-screen' : 'bg-gray-50 min-h-screen'}>
           <Navigation darkMode={darkMode} />
           <Routes>
-            <Route path="/" element={<RaceChecker />} />
+            <Route path="/" element={<ClubRiders />} />
             <Route path="/cache" element={<CacheManager />} />
             <Route path="/add-racer" element={<AddRacer />} />
             <Route path="/club-summary" element={<ClubSummary />} />

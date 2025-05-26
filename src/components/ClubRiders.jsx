@@ -36,7 +36,7 @@ function updateQueryParams(params) {
   window.history.replaceState({}, "", url);
 }
 
-export default function RaceChecker() {
+export default function ClubRiders() {
   const queryParams = getQueryParams();
   const { darkMode, toggleDarkMode } = useContext(ThemeContext);
   const [year, setYear] = useState(queryParams.year);
@@ -179,7 +179,7 @@ export default function RaceChecker() {
       
       <div className={`border-l-4 border-blue-600 rounded shadow-md p-4 mb-6 mx-2 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
         <div className="flex justify-between items-center mb-2">
-          <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-800'}`}>Race Checker</h3>
+          <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-800'}`}>Club Riders</h3>
         </div>
         <p className={`text-sm leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
           This tool displays British Cycling race data for club members. Data is fetched from the British Cycling Website 
