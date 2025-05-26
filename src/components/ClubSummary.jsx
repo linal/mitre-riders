@@ -498,7 +498,6 @@ export default function ClubSummary() {
                   {showComparison && <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">vs Prev</th>}
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Points</th>
                   {showComparison && <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">vs Prev</th>}
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Avg Points/Rider</th>
                 </tr>
               </thead>
               <tbody className={`divide-y divide-gray-200 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
@@ -546,9 +545,6 @@ export default function ClubSummary() {
                             {formatChange(calculateChange(data.points, prevYearCategoryData.points), data.points, prevYearCategoryData.points)}
                           </td>
                         )}
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {data.count > 0 ? (data.points / data.count).toFixed(1) : 0}
-                        </td>
                       </tr>
                     );
                   })}
@@ -571,7 +567,6 @@ export default function ClubSummary() {
                   {showComparison && <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">vs Prev</th>}
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Points</th>
                   {showComparison && <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">vs Prev</th>}
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Avg Points/Rider</th>
                 </tr>
               </thead>
               <tbody className={`divide-y divide-gray-200 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
@@ -600,9 +595,6 @@ export default function ClubSummary() {
                             {formatChange(calculateChange(data.points, prevYearClubData.points), data.points, prevYearClubData.points)}
                           </td>
                         )}
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {data.count > 0 ? (data.points / data.count).toFixed(1) : 0}
-                        </td>
                       </tr>
                     );
                   })}
