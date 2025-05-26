@@ -1,11 +1,13 @@
+// Load environment variables from .env file
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
 const path = require('path');
 const fs = require('fs');
 // Firebase Admin SDK for server-side operations
-const { initializeApp } = require('firebase/app');
-const { getAuth } = require('firebase/auth');
+const admin = require('firebase-admin');
 
 // Firebase configuration
 const firebaseConfig = {
@@ -17,9 +19,11 @@ const firebaseConfig = {
   appId: "1:701709492859:web:00f2529f28b096f94038de"
 };
 
-// Initialize Firebase
-const firebaseApp = initializeApp(firebaseConfig);
-const auth = getAuth(firebaseApp);
+// For development, use a simpler approach that doesn't require service account credentials
+admin.initializeApp({
+  credential: admin.credential.applicationDefault(),
+  projectId: firebaseConfig.projectId
+});
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -33,9 +37,9 @@ const verifyToken = async (req, res, next) => {
   }
 
   try {
-    // For development purposes, allow any token
-    // In production, you would use Firebase Admin SDK to verify the token
-    req.user = { uid: 'test-user' };
+    // Verify the ID token using Firebase Admin SDK
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    req.user = decodedToken;
     next();
   } catch (error) {
     console.error('Error verifying token:', error);
