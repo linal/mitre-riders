@@ -1,5 +1,6 @@
 import { useState, useEffect, useContext } from 'react';
 import { ThemeContext } from '../main';
+import { getAuth } from 'firebase/auth';
 
 function ClubsManager() {
   const [clubs, setClubs] = useState([]);
@@ -38,9 +39,21 @@ function ClubsManager() {
     }
 
     try {
+      const auth = getAuth();
+      const user = auth.currentUser;
+      
+      if (!user) {
+        throw new Error('You must be logged in to delete a club');
+      }
+      
+      const token = await user.getIdToken();
       setDeleteStatus({ type: 'loading', message: `Deleting ${clubName}...` });
       const response = await fetch(`/api/clubs/${encodeURIComponent(clubName)}`, {
         method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
 
       const result = await response.json();

@@ -1,6 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { ThemeContext } from '../main';
 import { Link } from 'react-router-dom';
+import { getAuth } from 'firebase/auth';
 
 const AddRacer = () => {
   const { darkMode } = useContext(ThemeContext);
@@ -20,9 +21,18 @@ const AddRacer = () => {
     setStatus({ message: '', isError: false });
     
     try {
+      const auth = getAuth();
+      const user = auth.currentUser;
+      
+      if (!user) {
+        throw new Error('You must be logged in to add a racer');
+      }
+      
+      const token = await user.getIdToken();
       const response = await fetch('/api/racers/add', {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ bc: bcNumber.trim() }),

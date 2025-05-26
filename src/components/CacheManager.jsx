@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext, useRef } from "react";
 import { ThemeContext } from "../main";
 import { Link } from "react-router-dom";
+import { getAuth } from "firebase/auth";
 
 export default function CacheManager() {
   const { darkMode } = useContext(ThemeContext);
@@ -74,9 +75,21 @@ export default function CacheManager() {
     setLoading(true);
     setMessage(null);
     try {
+      const auth = getAuth();
+      const user = auth.currentUser;
+      
+      if (!user) {
+        throw new Error('You must be logged in to delete cache files');
+      }
+      
+      const token = await user.getIdToken();
       const apiBase = import.meta.env.VITE_API_BASE_URL || window.location.origin || 'http://localhost:3001';
       const response = await fetch(`${apiBase}/api/cache/${selectedYear}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
       
       if (!response.ok) {
@@ -108,10 +121,19 @@ export default function CacheManager() {
     setLoading(true);
     setMessage(null);
     try {
+      const auth = getAuth();
+      const user = auth.currentUser;
+      
+      if (!user) {
+        throw new Error('You must be logged in to build cache');
+      }
+      
+      const token = await user.getIdToken();
       const apiBase = import.meta.env.VITE_API_BASE_URL || window.location.origin || 'http://localhost:3001';
       const response = await fetch(`${apiBase}/api/build-cache`, {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ year: selectedYear })
@@ -147,10 +169,19 @@ export default function CacheManager() {
     setLoading(true);
     setMessage(null);
     try {
+      const auth = getAuth();
+      const user = auth.currentUser;
+      
+      if (!user) {
+        throw new Error('You must be logged in to build cache');
+      }
+      
+      const token = await user.getIdToken();
       const apiBase = import.meta.env.VITE_API_BASE_URL || window.location.origin || 'http://localhost:3001';
       const response = await fetch(`${apiBase}/api/build-cache`, {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ 

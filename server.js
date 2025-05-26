@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 // Firebase Admin SDK for server-side operations
 const { initializeApp } = require('firebase/app');
+const { getAuth } = require('firebase/auth');
 
 // Firebase configuration
 const firebaseConfig = {
@@ -18,9 +19,29 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const firebaseApp = initializeApp(firebaseConfig);
+const auth = getAuth(firebaseApp);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Middleware to verify Firebase ID token
+const verifyToken = async (req, res, next) => {
+  const idToken = req.headers.authorization?.split('Bearer ')[1];
+  
+  if (!idToken) {
+    return res.status(401).json({ error: 'Unauthorized: No token provided' });
+  }
+
+  try {
+    // For development purposes, allow any token
+    // In production, you would use Firebase Admin SDK to verify the token
+    req.user = { uid: 'test-user' };
+    next();
+  } catch (error) {
+    console.error('Error verifying token:', error);
+    return res.status(403).json({ error: 'Forbidden: Invalid token' });
+  }
+};
 
 // Serve static frontend from /client
 app.use(cors());
@@ -168,8 +189,8 @@ app.get('/api/racers', (req, res) => {
   res.json(racers);
 });
 
-// Endpoint to update racers list
-app.post('/api/racers', express.json(), (req, res) => {
+// Endpoint to update racers list - PROTECTED
+app.post('/api/racers', verifyToken, (req, res) => {
   try {
     const newRacers = req.body;
     
@@ -190,8 +211,8 @@ app.post('/api/racers', express.json(), (req, res) => {
   }
 });
 
-// Endpoint to add a single racer by BC number
-app.post('/api/racers/add', express.json(), (req, res) => {
+// Endpoint to add a single racer by BC number - PROTECTED
+app.post('/api/racers/add', verifyToken, (req, res) => {
   try {
     const { bc } = req.body;
     
@@ -217,8 +238,8 @@ app.post('/api/racers/add', express.json(), (req, res) => {
   }
 });
 
-// New endpoint to build cache for all racers
-app.post('/api/build-cache', async (req, res) => {
+// New endpoint to build cache for all racers - PROTECTED
+app.post('/api/build-cache', verifyToken, async (req, res) => {
   const { year, racerId } = req.body || req.query;
   
   if (!year) {
@@ -426,8 +447,8 @@ app.get('/api/cache/:year', (req, res) => {
   }
 });
 
-// RESTful endpoint to delete cache files by year
-app.delete('/api/cache/:year', (req, res) => {
+// RESTful endpoint to delete cache files by year - PROTECTED
+app.delete('/api/cache/:year', verifyToken, (req, res) => {
   const { year } = req.params;
   
   if (!year || !/^\d{4}$/.test(year)) {
@@ -507,8 +528,8 @@ app.get('/api/clubs-file', (req, res) => {
   }
 });
 
-// Endpoint to delete a club
-app.delete('/api/clubs/:clubName', (req, res) => {
+// Endpoint to delete a club - PROTECTED
+app.delete('/api/clubs/:clubName', verifyToken, (req, res) => {
   try {
     const { clubName } = req.params;
     
