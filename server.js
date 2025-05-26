@@ -30,6 +30,14 @@ if (!fs.existsSync(RACERS_DIR)) {
   console.log(`Created racers directory: ${RACERS_DIR}`);
 }
 
+// Configure clubs directory
+const CLUBS_DIR = path.join(CACHE_DIR, 'clubs');
+if (!fs.existsSync(CLUBS_DIR)) {
+  fs.mkdirSync(CLUBS_DIR, { recursive: true });
+  console.log(`Created clubs directory: ${CLUBS_DIR}`);
+}
+const CLUBS_FILE = path.join(CLUBS_DIR, 'clubs.json');
+
 // Disk-based cache with in-memory lookup
 const cache = {};
 const CACHE_TTL_MS = process.env.NODE_ENV === 'production' 
@@ -449,6 +457,24 @@ app.delete('/api/cache/:year', (req, res) => {
   }
 });
 
+// Endpoint to get club names from the club cache
+app.get('/api/clubs', (req, res) => {
+  try {
+    if (fs.existsSync(CLUBS_FILE)) {
+      const clubsData = fs.readFileSync(CLUBS_FILE, 'utf8');
+      const clubs = JSON.parse(clubsData);
+      const clubNames = Object.keys(clubs);
+      
+      res.json(clubNames);
+    } else {
+      res.json([]);
+    }
+  } catch (err) {
+    console.error(`Error fetching club names: ${err.message}`);
+    res.status(500).send("Failed to fetch club names");
+  }
+});
+
 // Helper function to fetch and process racer data
 async function fetchRacerData(person_id, year) {
   // Fetch regular points (d=4)
@@ -644,6 +670,34 @@ async function fetchRacerData(person_id, year) {
       const end = cyclocrossHtml.indexOf("</td>", start);
       const value = cyclocrossHtml.slice(start, end).trim();
       cyclocrossPoints = isNaN(Number(value)) ? 0 : Number(value);
+    }
+  }
+
+  // Store club information in clubs cache file if club is found
+  if (club) {
+    try {
+      let clubs = {};
+      
+      // Read existing clubs data if file exists
+      if (fs.existsSync(CLUBS_FILE)) {
+        const clubsData = fs.readFileSync(CLUBS_FILE, 'utf8');
+        clubs = JSON.parse(clubsData);
+      }
+      
+      // Add or update club entry
+      if (!clubs[club]) {
+        clubs[club] = { members: [] };
+      }
+      
+      // Add member if not already in the list
+      if (!clubs[club].members.includes(person_id)) {
+        clubs[club].members.push(person_id);
+      }
+      
+      // Write updated clubs data
+      fs.writeFileSync(CLUBS_FILE, JSON.stringify(clubs, null, 2), 'utf8');
+    } catch (err) {
+      console.error(`Error updating clubs cache: ${err.message}`);
     }
   }
 
