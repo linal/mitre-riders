@@ -50,6 +50,16 @@ const verifyToken = async (req, res, next) => {
 // Serve static frontend from /client
 app.use(cors());
 app.use(express.json()); // Add JSON body parser for POST requests
+
+// Middleware to log all non-GET requests
+app.use((req, res, next) => {
+  if (req.method !== 'GET') {
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] ${req.method} ${req.originalUrl} - Request body:`, JSON.stringify(req.body));
+  }
+  next();
+});
+
 app.use(express.static(path.join(__dirname, 'client')));
 
 // Configure cache directory based on environment
