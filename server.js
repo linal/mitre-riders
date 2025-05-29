@@ -471,10 +471,23 @@ app.get('/api/cache/:year', (req, res) => {
     
     const result = matchingFiles.map(file => {
       const racerId = file.split('_')[0];
+      const filePath = path.join(CACHE_DIR, file);
+      let timestamp = null;
+      
+      // Read the file to get the timestamp
+      try {
+        const fileContent = fs.readFileSync(filePath, 'utf8');
+        const cacheEntry = JSON.parse(fileContent);
+        timestamp = cacheEntry.timestamp;
+      } catch (readErr) {
+        console.error(`Error reading timestamp from ${file}:`, readErr.message);
+      }
+      
       return {
         filename: file,
         racerId,
-        year
+        year,
+        lastBuilt: timestamp
       };
     });
     

@@ -27,7 +27,7 @@ COPY --from=builder /app/dist ./client
 COPY server.js .
     
 # Create cron job file that uses the current year
-RUN echo '0 4 * * * root /bin/sh -c '\''YEAR=$(date +\%Y) && curl "https://mitre-riders.fly.dev/api/build-cache" -H "accept: */*" -H "accept-language: en-GB,en;q=0.9,en-US;q=0.8" -H "content-type: application/json" --data-raw "{\"year\":\"$YEAR\"}" > /proc/1/fd/1 2>/proc/1/fd/2'\''' > /etc/cron.d/build-cache-cron \
+RUN echo '0 * * * * root /bin/sh -c '\''YEAR=$(date +\%Y) && curl "https://mitre-riders.fly.dev/api/build-cache" -H "accept: */*" -H "accept-language: en-GB,en;q=0.9,en-US;q=0.8" -H "content-type: application/json" --data-raw "{\"year\":\"$YEAR\"}" > /proc/1/fd/1 2>/proc/1/fd/2'\''' > /etc/cron.d/build-cache-cron \
     && chmod 0644 /etc/cron.d/build-cache-cron \
     && crontab /etc/cron.d/build-cache-cron
 

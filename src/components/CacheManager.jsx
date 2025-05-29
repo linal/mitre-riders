@@ -372,6 +372,9 @@ export default function CacheManager() {
                     <th scope="col" className={`px-4 py-3 text-left text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>
                       Filename
                     </th>
+                    <th scope="col" className={`px-4 py-3 text-left text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>
+                      Last Built
+                    </th>
                   </tr>
                 </thead>
                 <tbody className={`divide-y ${darkMode ? 'divide-gray-600' : 'divide-gray-200'}`}>
@@ -382,6 +385,9 @@ export default function CacheManager() {
                       </td>
                       <td className={`px-4 py-2 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
                         {file.filename}
+                      </td>
+                      <td className={`px-4 py-2 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-900'}`}>
+                        {file.lastBuilt ? new Date(file.lastBuilt).toLocaleString() : 'Unknown'}
                       </td>
                     </tr>
                   ))}
