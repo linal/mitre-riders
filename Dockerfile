@@ -27,12 +27,11 @@ COPY --from=builder /app/dist ./client
 COPY server.js .
     
 # Create cron job file that uses the current year
-RUN echo '0 * * * * root /bin/sh -c '\''YEAR=$(date +\%Y) && curl "https://mitre-riders.fly.dev/api/build-cache" -H "accept: */*" -H "accept-language: en-GB,en;q=0.9,en-US;q=0.8" -H "content-type: application/json" --data-raw "{\"year\":\"$YEAR\"}" > /proc/1/fd/1 2>/proc/1/fd/2'\''' > /etc/cron.d/build-cache-cron \
-    && chmod 0644 /etc/cron.d/build-cache-cron \
-    && crontab /etc/cron.d/build-cache-cron
+RUN echo '0 * * * * curl "https://mitre-riders.fly.dev/api/build-cache" -H "accept: */*" -H "accept-language: en-GB,en;q=0.9,en-US;q=0.8" -H "content-type: application/json" --data-raw "{\"year\":\"$(date +\%Y)\"}" >> /var/log/cron.log 2>&1' > /etc/cron.d/build-cache-cron \
+    && chmod 0644 /etc/cron.d/build-cache-cron
 
 # Create startup script
-RUN echo '#!/bin/bash\ncron\nexec node server.js' > /app/start.sh \
+RUN echo '#!/bin/bash\ntouch /var/log/cron.log\ncrontab /etc/cron.d/build-cache-cron\ncron -f &\nexec node server.js' > /app/start.sh \
     && chmod +x /app/start.sh
     
 EXPOSE 3000
