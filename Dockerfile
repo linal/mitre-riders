@@ -19,20 +19,12 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm install --omit=dev
 
-# Install cron and curl
-RUN apt-get update && apt-get install -y cron curl
+# Install curl for healthchecks
+RUN apt-get update && apt-get install -y curl
     
 # Copy built React app
 COPY --from=builder /app/dist ./client
 COPY server.js .
-    
-# Create cron job file that uses the current year
-RUN echo '0 * * * * curl "https://mitre-riders.fly.dev/api/build-cache" -H "accept: */*" -H "accept-language: en-GB,en;q=0.9,en-US;q=0.8" -H "content-type: application/json" --data-raw "{\"year\":\"$(date +\%Y)\"}" >> /var/log/cron.log 2>&1' > /etc/cron.d/build-cache-cron \
-    && chmod 0644 /etc/cron.d/build-cache-cron
-
-# Create startup script
-RUN echo '#!/bin/bash\ntouch /var/log/cron.log\ncrontab /etc/cron.d/build-cache-cron\ncron -f &\nexec node server.js' > /app/start.sh \
-    && chmod +x /app/start.sh
     
 EXPOSE 3000
     
@@ -41,4 +33,4 @@ ENV VITE_API_BASE_URL=
 # Set production environment for 24-hour caching
 ENV NODE_ENV=production
     
-CMD ["/app/start.sh"]
+CMD ["node", "server.js"]
