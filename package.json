@@ -17,6 +17,7 @@
     "firebase": "^11.8.1",
     "firebase-admin": "^13.4.0",
     "node-fetch": "^2.6.12",
+    "puppeteer": "^24.11.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-loading-overlay-ts": "^2.0.2",

@@ -7,7 +7,6 @@ export default function RiderCard({ racerId, racer, year, raceTypeFilter }) {
   return (
     <div className={`rounded-2xl shadow-md border p-4 space-y-2 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white'}`}>
       <div className={`text-xl font-semibold ${darkMode ? 'text-white' : ''}`}>{racer.name}</div>
-      <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>BC No: {racerId}</div>
       <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Club: {racer.club}</div>
       {racer.category && (
         <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
