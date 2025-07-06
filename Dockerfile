@@ -25,6 +25,7 @@ RUN apt-get update && apt-get install -y curl
 # Copy built React app
 COPY --from=builder /app/dist ./client
 COPY server.js .
+COPY services ./services
     
 EXPOSE 3000
     
