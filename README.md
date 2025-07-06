@@ -66,6 +66,8 @@ A web application for tracking and displaying British Cycling race points for ri
 
 ## Docker Deployment
 
+### Main Application
+
 The application includes a Dockerfile for containerized deployment:
 
 ```
@@ -73,13 +75,51 @@ docker build -t british-cycling-club-viewer .
 docker run -p 3000:3000 british-cycling-club-viewer
 ```
 
+### Cache Building Job
+
+A separate job container is available to build the cache periodically:
+
+```
+docker build -t bc-cache-job -f Dockerfile.job .
+docker run bc-cache-job
+```
+
 ## Deployment to Fly.io
+
+### Main Application
 
 The application is configured for deployment to Fly.io using the included `fly.toml` file:
 
 ```
 fly deploy
 ```
+
+### Cache Building Job
+
+A separate job is available to build the cache periodically:
+
+1. Deploy the job:
+   ```
+   ./run-job.sh
+   ```
+
+2. To run the job manually:
+   ```
+   fly apps restart mitre-riders-job
+   ```
+
+3. To set up a scheduled job:
+   ```
+   # Example: Run daily at 2 AM UTC
+   fly m run . --schedule "0 2 * * *" --app mitre-riders-job
+   ```
+
+## Configuration Files
+
+- `Dockerfile` - Main application container
+- `Dockerfile.job` - Cache building job container
+- `fly.toml` - Main application configuration
+- `fly.job.toml` - Job application configuration
 
 ## Environment Variables
 

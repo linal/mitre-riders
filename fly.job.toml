@@ -1,0 +1,17 @@
+app = "mitre-riders-job"
+primary_region = "lhr"  # London region, same as main app
+
+[build]
+  dockerfile = "Dockerfile.job"
+
+# No HTTP service needed for this job
+kill_signal = "SIGINT"
+kill_timeout = 5
+
+[env]
+  # No environment variables needed for this simple job
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 256

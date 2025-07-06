@@ -1,0 +1,23 @@
+FROM node:18-slim
+
+# Install curl
+RUN apt-get update && apt-get install -y curl
+
+WORKDIR /app
+
+# Create a simple script to run the job
+RUN echo '#!/bin/sh\n\
+echo "Starting cache build job for year $(date +%Y)"\n\
+curl "https://mitre-riders.fly.dev/api/build-cache" \\\n\
+  -H "accept: */*" \\\n\
+  -H "content-type: application/json" \\\n\
+  --data-raw "{\"year\":\"$(date +%Y)\"}" \\\n\
+  -v\n\
+echo "Job completed at $(date)"\n\
+' > /app/run-job.sh
+
+# Make the script executable
+RUN chmod +x /app/run-job.sh
+
+# Set the script as the entrypoint
+ENTRYPOINT ["/app/run-job.sh"]
