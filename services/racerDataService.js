@@ -1,5 +1,4 @@
 const puppeteer = require('puppeteer');
-const { execSync } = require('child_process');
 const fs = require('fs');
 
 // Helper function to process regular points from HTML
@@ -141,13 +140,14 @@ async function fetchRacerData(person_id, year, clubsFile) {
   console.log(`[${person_id}] PUPPETEER_LAUNCH: starting browser, timeout=300000ms, protocol_timeout=300000ms`);
   
   let browser;
+  let foundChrome = null;
+  
   try {
     console.log(`[${person_id}] PUPPETEER_ENV: NODE_ENV=${process.env.NODE_ENV}, Platform=${process.platform}`);
     
     // Check for Chrome installation
     const fs = require('fs');
     const chromePaths = ['/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser'];
-    let foundChrome = null;
     
     for (const path of chromePaths) {
       if (fs.existsSync(path)) {
@@ -200,27 +200,18 @@ async function fetchRacerData(person_id, year, clubsFile) {
     console.log(`[${person_id}] MEMORY_DETAILED: heap=${(memInfo.heapUsed/1024/1024).toFixed(1)}MB, rss=${(memInfo.rss/1024/1024).toFixed(1)}MB, external=${(memInfo.external/1024/1024).toFixed(1)}MB`);
     console.log(`[${person_id}] SYSTEM_DETAILED: uptime=${process.uptime()}s, platform=${process.platform}, arch=${process.arch}`);
     
-    // Try fallback with even more aggressive settings
-    console.log(`[${person_id}] CHROME_FALLBACK_ATTEMPT: Trying minimal Chrome config`);
+    // Check if Chrome processes are running
     try {
-      browser = await puppeteer.launch({
-        headless: true,
-        timeout: 10000,
-        executablePath: foundChrome,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu',
-          '--single-process',
-          '--no-zygote'
-        ]
-      });
-      console.log(`[${person_id}] CHROME_FALLBACK_SUCCESS: Minimal config worked`);
-    } catch (fallbackErr) {
-      console.log(`[${person_id}] CHROME_FALLBACK_FAILED: ${fallbackErr.message}`);
-      throw new Error(`Browser launch failed: ${err.message}`);
+      const { execSync } = require('child_process');
+      const processes = execSync('ps aux | grep chrome || true', { encoding: 'utf8' });
+      console.log(`[${person_id}] CHROME_PROCESSES: ${processes.split('\n').length - 1} processes found`);
+    } catch (psErr) {
+      console.log(`[${person_id}] PROCESS_CHECK_FAILED: ${psErr.message}`);
     }
+    
+    // Skip fallback - Chrome launch is fundamentally failing
+    console.log(`[${person_id}] CHROME_LAUNCH_ABANDONED: Container resources insufficient for Chrome`);
+    throw new Error(`Chrome cannot start in this container environment: ${err.message}`);
   }
   
   const launchDuration = Date.now() - launchStart;
