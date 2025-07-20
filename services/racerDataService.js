@@ -117,6 +117,7 @@ function processCyclocrossPoints(html) {
 async function fetchRacerData(person_id, year, clubsFile) {
   const browser = await puppeteer.launch({
     headless: true,
+    timeout: 120000,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -144,7 +145,7 @@ async function fetchRacerData(person_id, year, clubsFile) {
     // Fetch regular points
     const regularUrl = `https://www.britishcycling.org.uk/points?d=4&person_id=${person_id}&year=${year}`;
     console.log(`[${person_id}] Fetching regular points: ${regularUrl}`);
-    await page.goto(regularUrl, { waitUntil: 'networkidle2', timeout: 60000 });
+    await page.goto(regularUrl, { waitUntil: 'networkidle2', timeout: 120000 });
     await new Promise(resolve => setTimeout(resolve, 5000));
 
     let regularHtml = await page.content();
@@ -191,7 +192,7 @@ async function fetchRacerData(person_id, year, clubsFile) {
       await new Promise(resolve => setTimeout(resolve, 3000));
       const cyclocrossUrl = `https://www.britishcycling.org.uk/points?d=6&person_id=${person_id}&year=${year}`;
       console.log(`[${person_id}] Fetching cyclocross points: ${cyclocrossUrl}`);
-      await page.goto(cyclocrossUrl, { waitUntil: 'networkidle2', timeout: 60000 });
+      await page.goto(cyclocrossUrl, { waitUntil: 'networkidle2', timeout: 120000 });
       await new Promise(resolve => setTimeout(resolve, 5000));
 
       let cyclocrossHtml = await page.content();
