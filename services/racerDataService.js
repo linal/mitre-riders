@@ -1,4 +1,5 @@
 const puppeteer = require('puppeteer');
+const { execSync } = require('child_process');
 const fs = require('fs');
 
 // Helper function to process regular points from HTML
@@ -143,12 +144,26 @@ async function fetchRacerData(person_id, year, clubsFile) {
   try {
     console.log(`[${person_id}] PUPPETEER_ENV: NODE_ENV=${process.env.NODE_ENV}, Platform=${process.platform}`);
     
+    // Check for Chrome installation
+    try {
+      const chromeVersion = execSync('google-chrome --version', { encoding: 'utf8', timeout: 5000 }).trim();
+      console.log(`[${person_id}] CHROME_FOUND: ${chromeVersion}`);
+    } catch (chromeErr) {
+      console.log(`[${person_id}] CHROME_CHECK_FAILED: ${chromeErr.message}`);
+      try {
+        const chromiumVersion = execSync('chromium --version', { encoding: 'utf8', timeout: 5000 }).trim();
+        console.log(`[${person_id}] CHROMIUM_FOUND: ${chromiumVersion}`);
+      } catch (chromiumErr) {
+        console.log(`[${person_id}] CHROMIUM_CHECK_FAILED: ${chromiumErr.message}`);
+      }
+    }
+    
     browser = await Promise.race([
       puppeteer.launch({
         headless: 'new',
         timeout: 30000,
         protocolTimeout: 30000,
-        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome' || '/usr/bin/chromium',
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
