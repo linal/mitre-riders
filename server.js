@@ -6,6 +6,7 @@ const cors = require('cors');
 const fetch = require('node-fetch');
 const puppeteer = require('puppeteer');
 const { fetchRacerData } = require('./services/racerDataService');
+const { fetchRacerData: fetchRacerDataAxios } = require('./services/axiosRacerService');
 const path = require('path');
 const fs = require('fs');
 // Firebase Admin SDK for server-side operations
@@ -624,9 +625,16 @@ app.delete('/api/clubs/:clubName', verifyToken, (req, res) => {
   }
 });
 
-// Wrapper function to call the service
+// Wrapper function with hybrid approach
 async function fetchRacerDataWrapper(person_id, year) {
-  return await fetchRacerData(person_id, year, CLUBS_FILE);
+  try {
+    // Try axios first (faster, more reliable)
+    return await fetchRacerDataAxios(person_id, year, CLUBS_FILE);
+  } catch (err) {
+    console.log(`[${person_id}] Axios failed, trying Puppeteer: ${err.message}`);
+    // Fallback to Puppeteer for Cloudflare challenges
+    return await fetchRacerData(person_id, year, CLUBS_FILE);
+  }
 }
 
 // Serve React app for all unmatched routes
