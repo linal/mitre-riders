@@ -3,6 +3,7 @@ const fs = require('fs');
 
 // Helper function to process regular points from HTML
 function processRegularPoints(html) {
+  console.log('PROCESS_REGULAR: Starting HTML processing');
   let raceCount = 0;
   let totalPoints = 0;
   let regionalPoints = 0;
@@ -10,14 +11,17 @@ function processRegularPoints(html) {
 
   const tbodyStart = html.indexOf("<tbody>");
   const tbodyEnd = html.indexOf("</tbody>");
+  console.log(`PROCESS_REGULAR: tbody found=${tbodyStart !== -1 && tbodyEnd !== -1}, start=${tbodyStart}, end=${tbodyEnd}`);
 
   if (tbodyStart !== -1 && tbodyEnd !== -1) {
     const tbody = html.slice(tbodyStart, tbodyEnd);
     const eventIdMatches = [...tbody.matchAll(/\/events\/details\/(\d+)\//g)];
     const uniqueEventIds = new Set(eventIdMatches.map(match => match[1]));
     raceCount = uniqueEventIds.size;
+    console.log(`PROCESS_REGULAR: Found ${eventIdMatches.length} event matches, ${raceCount} unique races`);
 
     const rows = tbody.split("<tr>");
+    console.log(`PROCESS_REGULAR: Processing ${rows.length - 1} table rows`);
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
       const cells = row.split("<td>");
@@ -41,7 +45,10 @@ function processRegularPoints(html) {
   }
 
   const tfootStart = html.indexOf("<tfoot>");
+  console.log(`PROCESS_REGULAR: tfoot found=${tfootStart !== -1}`);
   if (tfootStart !== -1) {
+    const tfootSection = html.slice(tfootStart, tfootStart + 500);
+    console.log(`PROCESS_REGULAR: tfoot preview=${tfootSection.replace(/\n/g, ' ').replace(/\s+/g, ' ')}`);
     let pos = html.indexOf("<td>", tfootStart);
     for (let i = 0; i < 4 && pos !== -1; i++) {
       pos = html.indexOf("<td>", pos + 1);
@@ -51,14 +58,17 @@ function processRegularPoints(html) {
       const end = html.indexOf("</td>", start);
       const value = html.slice(start, end).trim();
       totalPoints = isNaN(Number(value)) ? 0 : Number(value);
+      console.log(`PROCESS_REGULAR: Total points extracted='${value}', parsed=${totalPoints}`);
     }
   }
 
+  console.log(`PROCESS_REGULAR: Final results - races=${raceCount}, total=${totalPoints}, regional=${regionalPoints}, national=${nationalPoints}`);
   return { raceCount, totalPoints, regionalPoints, nationalPoints };
 }
 
 // Helper function to process cyclocross points from HTML
 function processCyclocrossPoints(html) {
+  console.log('PROCESS_CX: Starting cyclocross HTML processing');
   let raceCount = 0;
   let totalPoints = 0;
   let regionalPoints = 0;
@@ -66,14 +76,17 @@ function processCyclocrossPoints(html) {
 
   const tbodyStart = html.indexOf("<tbody>");
   const tbodyEnd = html.indexOf("</tbody>");
+  console.log(`PROCESS_CX: tbody found=${tbodyStart !== -1 && tbodyEnd !== -1}, start=${tbodyStart}, end=${tbodyEnd}`);
 
   if (tbodyStart !== -1 && tbodyEnd !== -1) {
     const tbody = html.slice(tbodyStart, tbodyEnd);
     const eventIdMatches = [...tbody.matchAll(/\/events\/details\/(\d+)\//g)];
     const uniqueEventIds = new Set(eventIdMatches.map(match => match[1]));
     raceCount = uniqueEventIds.size;
+    console.log(`PROCESS_CX: Found ${eventIdMatches.length} event matches, ${raceCount} unique races`);
 
     const rows = tbody.split("<tr>");
+    console.log(`PROCESS_CX: Processing ${rows.length - 1} table rows`);
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
       const cells = row.split("<td>");
@@ -97,7 +110,10 @@ function processCyclocrossPoints(html) {
   }
 
   const tfootStart = html.indexOf("<tfoot>");
+  console.log(`PROCESS_CX: tfoot found=${tfootStart !== -1}`);
   if (tfootStart !== -1) {
+    const tfootSection = html.slice(tfootStart, tfootStart + 500);
+    console.log(`PROCESS_CX: tfoot preview=${tfootSection.replace(/\n/g, ' ').replace(/\s+/g, ' ')}`);
     let pos = html.indexOf("<td>", tfootStart);
     for (let i = 0; i < 4 && pos !== -1; i++) {
       pos = html.indexOf("<td>", pos + 1);
@@ -107,9 +123,11 @@ function processCyclocrossPoints(html) {
       const end = html.indexOf("</td>", start);
       const value = html.slice(start, end).trim();
       totalPoints = isNaN(Number(value)) ? 0 : Number(value);
+      console.log(`PROCESS_CX: Total points extracted='${value}', parsed=${totalPoints}`);
     }
   }
 
+  console.log(`PROCESS_CX: Final results - races=${raceCount}, total=${totalPoints}, regional=${regionalPoints}, national=${nationalPoints}`);
   return { raceCount, totalPoints, regionalPoints, nationalPoints };
 }
 
@@ -162,21 +180,42 @@ async function fetchRacerData(person_id, year, clubsFile) {
     let regularHtml = await page.content();
     console.log(`[${person_id}] Regular HTML length: ${regularHtml.length}`);
     
+    // Log key HTML sections for LLM analysis
+    const titleMatch = regularHtml.match(/<title[^>]*>([^<]*)<\/title>/i);
+    console.log(`[${person_id}] PAGE_TITLE: ${titleMatch ? titleMatch[1] : 'Not found'}`);
+    
+    const bodyStart = regularHtml.indexOf('<body');
+    const bodyContent = bodyStart !== -1 ? regularHtml.substring(bodyStart, bodyStart + 1000) : 'Body not found';
+    console.log(`[${person_id}] BODY_START: ${bodyContent.replace(/\n/g, ' ').replace(/\s+/g, ' ')}`);
+    
     if (regularHtml.includes('Just a moment') || regularHtml.includes('cloudflare')) {
-      console.log(`[${person_id}] Cloudflare challenge detected on regular page, waiting 20s...`);
+      console.log(`[${person_id}] CLOUDFLARE_DETECTED: Challenge page detected`);
+      const cfContent = regularHtml.substring(0, 2000).replace(/\n/g, ' ').replace(/\s+/g, ' ');
+      console.log(`[${person_id}] CLOUDFLARE_HTML: ${cfContent}`);
       await new Promise(resolve => setTimeout(resolve, 20000));
       regularHtml = await page.content();
       console.log(`[${person_id}] After wait, regular HTML length: ${regularHtml.length}`);
       if (regularHtml.includes('Just a moment') || regularHtml.includes('cloudflare')) {
-        console.log(`[${person_id}] Cloudflare challenge still present on regular page`);
+        console.log(`[${person_id}] CLOUDFLARE_PERSISTENT: Challenge not resolved`);
         throw new Error('Cloudflare challenge not resolved');
       }
-      console.log(`[${person_id}] Cloudflare challenge resolved on regular page`);
+      console.log(`[${person_id}] CLOUDFLARE_RESOLVED: Challenge passed`);
     }
 
+    // Log HTML structure for data extraction analysis
+    const headerSection = regularHtml.match(/<h1[^>]*class="article__header__title-opener"[^>]*>.*?<\/h1>/s);
+    console.log(`[${person_id}] HEADER_SECTION: ${headerSection ? headerSection[0] : 'Not found'}`);
+    
+    const ddSections = [...regularHtml.matchAll(/<dd>[^<]*(?:<a[^>]*>[^<]*<\/a>)?[^<]*<\/dd>/g)];
+    console.log(`[${person_id}] DD_SECTIONS: Found ${ddSections.length} sections`);
+    ddSections.forEach((match, i) => {
+      console.log(`[${person_id}] DD_${i}: ${match[0]}`);
+    });
+    
     // Extract name and club
     const nameMatch = regularHtml.match(/<h1 class="article__header__title-opener">Points: ([^<]+)<\/h1>/);
     const name = nameMatch?.[1]?.trim() || '';
+    console.log(`[${person_id}] NAME_EXTRACTION: Match=${!!nameMatch}, Value='${name}'`);
 
     let club = '';
     let clubId = '';
@@ -187,6 +226,7 @@ async function fetchRacerData(person_id, year, clubsFile) {
       : /<dd>Year End Club: <a[^>]*href="\/clubpoints\/\?club_id=(\d+)[^"]*">([^<]+)<\/a>/;
     
     const clubMatch = regularHtml.match(clubRegex);
+    console.log(`[${person_id}] CLUB_EXTRACTION: Regex=${year === currentYear ? 'Current' : 'YearEnd'}, Match=${!!clubMatch}`);
     if (clubMatch?.[2]) {
       club = clubMatch[2].trim();
       clubId = clubMatch[1];
@@ -194,8 +234,9 @@ async function fetchRacerData(person_id, year, clubsFile) {
 
     const categoryMatch = regularHtml.match(/<dd>Category:\s*([^<]+)<\/dd>/);
     const category = categoryMatch?.[1]?.trim() || '';
+    console.log(`[${person_id}] CATEGORY_EXTRACTION: Match=${!!categoryMatch}, Value='${category}'`);
 
-    console.log(`[${person_id}] Extracted - Name: ${name}, Club: ${club}, Category: ${category}`);
+    console.log(`[${person_id}] EXTRACTED_DATA: Name='${name}', Club='${club}', Category='${category}'`);
     
     // Fetch cyclocross points
     let cyclocrossData = { raceCount: 0, totalPoints: 0, regionalPoints: 0, nationalPoints: 0 };
@@ -212,15 +253,26 @@ async function fetchRacerData(person_id, year, clubsFile) {
       let cyclocrossHtml = await page.content();
       console.log(`[${person_id}] Cyclocross HTML length: ${cyclocrossHtml.length}`);
       
+      // Log cyclocross page structure
+      const cxTitleMatch = cyclocrossHtml.match(/<title[^>]*>([^<]*)<\/title>/i);
+      console.log(`[${person_id}] CX_PAGE_TITLE: ${cxTitleMatch ? cxTitleMatch[1] : 'Not found'}`);
+      
+      const cxTableMatch = cyclocrossHtml.match(/<table[^>]*>.*?<\/table>/s);
+      console.log(`[${person_id}] CX_TABLE_FOUND: ${!!cxTableMatch}`);
+      if (cxTableMatch) {
+        const tablePreview = cxTableMatch[0].substring(0, 500).replace(/\n/g, ' ').replace(/\s+/g, ' ');
+        console.log(`[${person_id}] CX_TABLE_PREVIEW: ${tablePreview}`);
+      }
+      
       if (cyclocrossHtml.includes('Just a moment') || cyclocrossHtml.includes('cloudflare')) {
-        console.log(`[${person_id}] Cloudflare challenge detected on cyclocross page, waiting 20s...`);
+        console.log(`[${person_id}] CX_CLOUDFLARE_DETECTED: Challenge page detected`);
         await new Promise(resolve => setTimeout(resolve, 20000));
         cyclocrossHtml = await page.content();
         console.log(`[${person_id}] After wait, cyclocross HTML length: ${cyclocrossHtml.length}`);
         if (cyclocrossHtml.includes('Just a moment') || cyclocrossHtml.includes('cloudflare')) {
-          console.log(`[${person_id}] Skipping cyclocross data due to persistent Cloudflare challenge`);
+          console.log(`[${person_id}] CX_CLOUDFLARE_PERSISTENT: Skipping cyclocross data`);
         } else {
-          console.log(`[${person_id}] Cloudflare challenge resolved on cyclocross page`);
+          console.log(`[${person_id}] CX_CLOUDFLARE_RESOLVED: Processing cyclocross data`);
           cyclocrossData = processCyclocrossPoints(cyclocrossHtml);
           
           // Try to get club from cyclocross if not found
@@ -237,7 +289,7 @@ async function fetchRacerData(person_id, year, clubsFile) {
           }
         }
       } else {
-        console.log(`[${person_id}] No Cloudflare challenge on cyclocross page`);
+        console.log(`[${person_id}] CX_NO_CLOUDFLARE: Processing cyclocross data`);
         cyclocrossData = processCyclocrossPoints(cyclocrossHtml);
         
         // Try to get club from cyclocross if not found
