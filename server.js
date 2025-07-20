@@ -629,9 +629,10 @@ app.delete('/api/clubs/:clubName', verifyToken, (req, res) => {
 async function fetchRacerDataWrapper(person_id, year) {
   try {
     // Try axios first (faster, more reliable)
+    console.log(`[${person_id}] Using AXIOS method`);
     return await fetchRacerDataAxios(person_id, year, CLUBS_FILE);
   } catch (err) {
-    console.log(`[${person_id}] Axios failed, trying Puppeteer: ${err.message}`);
+    console.log(`[${person_id}] AXIOS failed, switching to PUPPETEER: ${err.message}`);
     // Fallback to Puppeteer for Cloudflare challenges
     return await fetchRacerData(person_id, year, CLUBS_FILE);
   }

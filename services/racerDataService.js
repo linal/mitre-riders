@@ -141,11 +141,11 @@ async function fetchRacerData(person_id, year, clubsFile) {
   });
 
   try {
-    console.log(`[${person_id}] Starting fetch for year ${year}`);
+    console.log(`[${person_id}] PUPPETEER: Starting fetch for year ${year}`);
     
     // Fetch regular points
     const regularUrl = `https://www.britishcycling.org.uk/points?d=4&person_id=${person_id}&year=${year}`;
-    console.log(`[${person_id}] Fetching regular points: ${regularUrl}`);
+    console.log(`[${person_id}] PUPPETEER: Fetching regular points: ${regularUrl}`);
     await page.goto(regularUrl, { waitUntil: 'networkidle2', timeout: 300000 });
     await new Promise(resolve => setTimeout(resolve, 5000));
 
@@ -192,7 +192,7 @@ async function fetchRacerData(person_id, year, clubsFile) {
     try {
       await new Promise(resolve => setTimeout(resolve, 3000));
       const cyclocrossUrl = `https://www.britishcycling.org.uk/points?d=6&person_id=${person_id}&year=${year}`;
-      console.log(`[${person_id}] Fetching cyclocross points: ${cyclocrossUrl}`);
+      console.log(`[${person_id}] PUPPETEER: Fetching cyclocross points: ${cyclocrossUrl}`);
       await page.goto(cyclocrossUrl, { waitUntil: 'networkidle2', timeout: 300000 });
       await new Promise(resolve => setTimeout(resolve, 5000));
 

@@ -82,7 +82,7 @@ async function fetchWithRetry(url, maxRetries = 3) {
 
 async function fetchRacerData(person_id, year, clubsFile) {
   try {
-    console.log(`[${person_id}] Starting axios fetch for year ${year}`);
+    console.log(`[${person_id}] AXIOS: Starting fetch for year ${year}`);
     
     const regularUrl = `https://www.britishcycling.org.uk/points?d=4&person_id=${person_id}&year=${year}`;
     const regularHtml = await fetchWithRetry(regularUrl);
@@ -140,7 +140,7 @@ async function fetchRacerData(person_id, year, clubsFile) {
       clubId
     };
   } catch (err) {
-    console.log(`[${person_id}] Axios method failed, falling back to Puppeteer`);
+    console.log(`[${person_id}] AXIOS: Method failed - ${err.message}`);
     throw err;
   }
 }
