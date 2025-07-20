@@ -61,16 +61,37 @@ function processCyclocrossPoints(html) {
   return processRegularPoints(html); // Same logic
 }
 
+const userAgents = [
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+];
+
 async function fetchWithRetry(url, maxRetries = 3) {
   for (let i = 0; i < maxRetries; i++) {
     const attemptStart = Date.now();
     try {
+      // Add delay between requests to avoid rate limiting
+      if (i > 0) {
+        const delay = 2000 + (i * 3000); // 2s, 5s, 8s delays
+        console.log(`AXIOS_DELAY: waiting ${delay}ms to avoid rate limiting`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+      
       console.log(`AXIOS_REQUEST: attempt=${i + 1}/${maxRetries}, url=${url}, timeout=60000ms`);
       const response = await axios.get(url, {
         timeout: 60000,
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+          'User-Agent': userAgents[i % userAgents.length],
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-GB,en;q=0.9',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Upgrade-Insecure-Requests': '1'
         }
       });
       const duration = Date.now() - attemptStart;
@@ -80,9 +101,7 @@ async function fetchWithRetry(url, maxRetries = 3) {
       const duration = Date.now() - attemptStart;
       console.log(`AXIOS_RETRY: attempt=${i + 1}/${maxRetries}, duration=${duration}ms, error_code=${err.code}, error_msg="${err.message}", status=${err.response?.status}`);
       if (i === maxRetries - 1) throw err;
-      const waitTime = 5000 * (i + 1);
-      console.log(`AXIOS_WAIT: waiting ${waitTime}ms before retry`);
-      await new Promise(resolve => setTimeout(resolve, waitTime));
+      // Don't add extra wait here since we already delay at start of next iteration
     }
   }
 }
@@ -96,9 +115,9 @@ async function fetchRacerData(person_id, year, clubsFile) {
     const regularUrl = `https://www.britishcycling.org.uk/points?d=4&person_id=${person_id}&year=${year}`;
     const regularHtml = await fetchWithRetry(regularUrl);
     
-    if (regularHtml.includes('Just a moment') || regularHtml.includes('cloudflare')) {
-      console.log(`AXIOS_CLOUDFLARE: detected challenge, html_length=${regularHtml.length}, contains_just_moment=${regularHtml.includes('Just a moment')}, contains_cloudflare=${regularHtml.includes('cloudflare')}`);
-      throw new Error('Cloudflare challenge detected - use Puppeteer fallback');
+    if (regularHtml.includes('Just a moment') || regularHtml.includes('cloudflare') || regularHtml.includes('403 Forbidden') || regularHtml.length < 1000) {
+      console.log(`AXIOS_BLOCKED: detected blocking, html_length=${regularHtml.length}, contains_403=${regularHtml.includes('403')}, contains_cloudflare=${regularHtml.includes('cloudflare')}`);
+      throw new Error('Request blocked - use Puppeteer fallback');
     }
     
     console.log(`AXIOS_HTML_OK: regular_page loaded, html_length=${regularHtml.length}`);
