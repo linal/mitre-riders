@@ -625,9 +625,9 @@ app.delete('/api/clubs/:clubName', verifyToken, (req, res) => {
   }
 });
 
-// Wrapper function using only axios
+// Wrapper function using only puppeteer
 async function fetchRacerDataWrapper(person_id, year) {
-  return await fetchRacerDataAxios(person_id, year, CLUBS_FILE);
+  return await fetchRacerData(person_id, year, CLUBS_FILE);
 }
 
 // Serve React app for all unmatched routes
