@@ -115,6 +115,9 @@ function processCyclocrossPoints(html) {
 
 // Main service function to fetch and process racer data
 async function fetchRacerData(person_id, year, clubsFile) {
+  const startTime = Date.now();
+  console.log(`[${person_id}] PUPPETEER_START: timestamp=${new Date().toISOString()}, person_id=${person_id}, year=${year}`);
+  
   const launchStart = Date.now();
   console.log(`PUPPETEER_LAUNCH: starting browser, timeout=300000ms, protocol_timeout=300000ms`);
   const browser = await puppeteer.launch({
@@ -277,7 +280,7 @@ async function fetchRacerData(person_id, year, clubsFile) {
       }
     }
 
-    return {
+    const result = {
       raceCount: regularData.raceCount + cyclocrossData.raceCount,
       points: regularData.totalPoints + cyclocrossData.totalPoints,
       roadAndTrackPoints: regularData.totalPoints,
@@ -295,6 +298,14 @@ async function fetchRacerData(person_id, year, clubsFile) {
       cxRegionalPoints: cyclocrossData.regionalPoints,
       cxNationalPoints: cyclocrossData.nationalPoints
     };
+    
+    const duration = Date.now() - startTime;
+    console.log(`[${person_id}] PUPPETEER_END: success=true, duration=${duration}ms, points=${result.points}, races=${result.raceCount}`);
+    return result;
+  } catch (err) {
+    const duration = Date.now() - startTime;
+    console.log(`[${person_id}] PUPPETEER_END: success=false, duration=${duration}ms, error="${err.message}"`);
+    throw err;
   } finally {
     await browser.close();
   }

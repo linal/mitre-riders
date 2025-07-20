@@ -88,8 +88,10 @@ async function fetchWithRetry(url, maxRetries = 3) {
 }
 
 async function fetchRacerData(person_id, year, clubsFile) {
+  const startTime = Date.now();
+  console.log(`[${person_id}] AXIOS_START: timestamp=${new Date().toISOString()}, person_id=${person_id}, year=${year}`);
+  
   try {
-    console.log(`[${person_id}] AXIOS: Starting fetch for year ${year}`);
     
     const regularUrl = `https://www.britishcycling.org.uk/points?d=4&person_id=${person_id}&year=${year}`;
     const regularHtml = await fetchWithRetry(regularUrl);
@@ -140,7 +142,7 @@ async function fetchRacerData(person_id, year, clubsFile) {
 
     const regularData = processRegularPoints(regularHtml);
 
-    return {
+    const result = {
       raceCount: regularData.raceCount + cyclocrossData.raceCount,
       points: regularData.totalPoints + cyclocrossData.totalPoints,
       roadAndTrackPoints: regularData.totalPoints,
@@ -152,8 +154,13 @@ async function fetchRacerData(person_id, year, clubsFile) {
       club,
       clubId
     };
+    
+    const duration = Date.now() - startTime;
+    console.log(`[${person_id}] AXIOS_END: success=true, duration=${duration}ms, points=${result.points}, races=${result.raceCount}`);
+    return result;
   } catch (err) {
-    console.log(`[${person_id}] AXIOS: Method failed - ${err.message}`);
+    const duration = Date.now() - startTime;
+    console.log(`[${person_id}] AXIOS_END: success=false, duration=${duration}ms, error="${err.message}"`);
     throw err;
   }
 }
