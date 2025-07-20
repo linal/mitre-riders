@@ -141,33 +141,38 @@ async function fetchRacerData(person_id, year, clubsFile) {
   
   let browser;
   try {
+    console.log(`[${person_id}] PUPPETEER_ENV: NODE_ENV=${process.env.NODE_ENV}, Platform=${process.platform}`);
+    
     browser = await Promise.race([
       puppeteer.launch({
-        headless: true,
-        timeout: 60000,
-        protocolTimeout: 60000,
+        headless: 'new',
+        timeout: 30000,
+        protocolTimeout: 30000,
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
           '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--no-first-run',
-          '--no-zygote',
           '--disable-gpu',
           '--disable-extensions',
           '--disable-background-timer-throttling',
           '--disable-backgrounding-occluded-windows',
-          '--disable-renderer-backgrounding'
+          '--disable-renderer-backgrounding',
+          '--disable-features=TranslateUI',
+          '--disable-ipc-flooding-protection',
+          '--memory-pressure-off',
+          '--max_old_space_size=4096'
         ]
       }),
       new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Browser launch timeout after 60s')), 60000)
+        setTimeout(() => reject(new Error('Browser launch timeout after 30s')), 30000)
       )
     ]);
   } catch (err) {
     const launchDuration = Date.now() - launchStart;
     console.log(`[${person_id}] PUPPETEER_LAUNCH_FAILED: duration=${launchDuration}ms, error="${err.message}"`);
-    throw err;
+    console.log(`[${person_id}] SYSTEM_INFO: memory=${process.memoryUsage().heapUsed / 1024 / 1024}MB, uptime=${process.uptime()}s`);
+    throw new Error(`Browser launch failed: ${err.message}`);
   }
   
   const launchDuration = Date.now() - launchStart;
