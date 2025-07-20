@@ -137,24 +137,46 @@ async function fetchRacerData(person_id, year, clubsFile) {
   console.log(`[${person_id}] PUPPETEER_START: timestamp=${new Date().toISOString()}, person_id=${person_id}, year=${year}`);
   
   const launchStart = Date.now();
-  console.log(`PUPPETEER_LAUNCH: starting browser, timeout=300000ms, protocol_timeout=300000ms`);
-  const browser = await puppeteer.launch({
-    headless: true,
-    timeout: 300000,
-    protocolTimeout: 300000,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-accelerated-2d-canvas',
-      '--no-first-run',
-      '--no-zygote',
-      '--disable-gpu'
-    ]
-  });
+  console.log(`[${person_id}] PUPPETEER_LAUNCH: starting browser, timeout=300000ms, protocol_timeout=300000ms`);
+  
+  let browser;
+  try {
+    browser = await Promise.race([
+      puppeteer.launch({
+        headless: true,
+        timeout: 60000,
+        protocolTimeout: 60000,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-accelerated-2d-canvas',
+          '--no-first-run',
+          '--no-zygote',
+          '--disable-gpu',
+          '--disable-extensions',
+          '--disable-background-timer-throttling',
+          '--disable-backgrounding-occluded-windows',
+          '--disable-renderer-backgrounding'
+        ]
+      }),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Browser launch timeout after 60s')), 60000)
+      )
+    ]);
+  } catch (err) {
+    const launchDuration = Date.now() - launchStart;
+    console.log(`[${person_id}] PUPPETEER_LAUNCH_FAILED: duration=${launchDuration}ms, error="${err.message}"`);
+    throw err;
+  }
+  
   const launchDuration = Date.now() - launchStart;
-  console.log(`PUPPETEER_LAUNCHED: browser ready in ${launchDuration}ms`);
+  console.log(`[${person_id}] PUPPETEER_LAUNCHED: browser ready in ${launchDuration}ms`);
+  
+  const pageStart = Date.now();
   const page = await browser.newPage();
+  const pageDuration = Date.now() - pageStart;
+  console.log(`[${person_id}] PUPPETEER_PAGE: new page created in ${pageDuration}ms`);
 
   await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
   await page.setExtraHTTPHeaders({
@@ -170,12 +192,28 @@ async function fetchRacerData(person_id, year, clubsFile) {
     
     // Fetch regular points
     const regularUrl = `https://www.britishcycling.org.uk/points?d=4&person_id=${person_id}&year=${year}`;
-    console.log(`[${person_id}] PUPPETEER: Fetching regular points: ${regularUrl}`);
+    console.log(`[${person_id}] PUPPETEER_GOTO_START: Fetching regular points: ${regularUrl}`);
     const gotoStart = Date.now();
-    await page.goto(regularUrl, { waitUntil: 'networkidle2', timeout: 300000 });
+    
+    try {
+      await Promise.race([
+        page.goto(regularUrl, { waitUntil: 'networkidle2', timeout: 120000 }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Page goto timeout after 120s')), 120000)
+        )
+      ]);
+    } catch (err) {
+      const gotoDuration = Date.now() - gotoStart;
+      console.log(`[${person_id}] PUPPETEER_GOTO_FAILED: duration=${gotoDuration}ms, error="${err.message}"`);
+      throw err;
+    }
+    
     const gotoDuration = Date.now() - gotoStart;
-    console.log(`PUPPETEER_GOTO: regular page loaded in ${gotoDuration}ms`);
+    console.log(`[${person_id}] PUPPETEER_GOTO_SUCCESS: regular page loaded in ${gotoDuration}ms`);
+    
+    console.log(`[${person_id}] PUPPETEER_WAIT: Starting 5s wait`);
     await new Promise(resolve => setTimeout(resolve, 5000));
+    console.log(`[${person_id}] PUPPETEER_WAIT: 5s wait completed`);
 
     let regularHtml = await page.content();
     console.log(`[${person_id}] Regular HTML length: ${regularHtml.length}`);
@@ -243,12 +281,28 @@ async function fetchRacerData(person_id, year, clubsFile) {
     try {
       await new Promise(resolve => setTimeout(resolve, 3000));
       const cyclocrossUrl = `https://www.britishcycling.org.uk/points?d=6&person_id=${person_id}&year=${year}`;
-      console.log(`[${person_id}] PUPPETEER: Fetching cyclocross points: ${cyclocrossUrl}`);
+      console.log(`[${person_id}] PUPPETEER_CX_GOTO_START: Fetching cyclocross points: ${cyclocrossUrl}`);
       const cxGotoStart = Date.now();
-      await page.goto(cyclocrossUrl, { waitUntil: 'networkidle2', timeout: 300000 });
+      
+      try {
+        await Promise.race([
+          page.goto(cyclocrossUrl, { waitUntil: 'networkidle2', timeout: 120000 }),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('CX page goto timeout after 120s')), 120000)
+          )
+        ]);
+      } catch (err) {
+        const cxGotoDuration = Date.now() - cxGotoStart;
+        console.log(`[${person_id}] PUPPETEER_CX_GOTO_FAILED: duration=${cxGotoDuration}ms, error="${err.message}"`);
+        throw err;
+      }
+      
       const cxGotoDuration = Date.now() - cxGotoStart;
-      console.log(`PUPPETEER_GOTO: cyclocross page loaded in ${cxGotoDuration}ms`);
+      console.log(`[${person_id}] PUPPETEER_CX_GOTO_SUCCESS: cyclocross page loaded in ${cxGotoDuration}ms`);
+      
+      console.log(`[${person_id}] PUPPETEER_CX_WAIT: Starting 5s wait`);
       await new Promise(resolve => setTimeout(resolve, 5000));
+      console.log(`[${person_id}] PUPPETEER_CX_WAIT: 5s wait completed`);
 
       let cyclocrossHtml = await page.content();
       console.log(`[${person_id}] Cyclocross HTML length: ${cyclocrossHtml.length}`);
@@ -359,7 +413,13 @@ async function fetchRacerData(person_id, year, clubsFile) {
     console.log(`[${person_id}] PUPPETEER_END: success=false, duration=${duration}ms, error="${err.message}"`);
     throw err;
   } finally {
-    await browser.close();
+    if (browser) {
+      const closeStart = Date.now();
+      console.log(`[${person_id}] PUPPETEER_CLOSE: Starting browser close`);
+      await browser.close();
+      const closeDuration = Date.now() - closeStart;
+      console.log(`[${person_id}] PUPPETEER_CLOSED: Browser closed in ${closeDuration}ms`);
+    }
   }
 }
 
