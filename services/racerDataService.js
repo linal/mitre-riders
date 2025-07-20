@@ -118,6 +118,7 @@ async function fetchRacerData(person_id, year, clubsFile) {
   const browser = await puppeteer.launch({
     headless: true,
     timeout: 120000,
+    protocolTimeout: 180000,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
