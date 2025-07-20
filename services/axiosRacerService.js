@@ -63,7 +63,9 @@ function processCyclocrossPoints(html) {
 
 async function fetchWithRetry(url, maxRetries = 3) {
   for (let i = 0; i < maxRetries; i++) {
+    const attemptStart = Date.now();
     try {
+      console.log(`AXIOS_REQUEST: attempt=${i + 1}/${maxRetries}, url=${url}, timeout=60000ms`);
       const response = await axios.get(url, {
         timeout: 60000,
         headers: {
@@ -71,11 +73,16 @@ async function fetchWithRetry(url, maxRetries = 3) {
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
         }
       });
+      const duration = Date.now() - attemptStart;
+      console.log(`AXIOS_SUCCESS: attempt=${i + 1}, duration=${duration}ms, status=${response.status}, content_length=${response.data?.length}`);
       return response.data;
     } catch (err) {
-      console.log(`Attempt ${i + 1} failed: ${err.message}`);
+      const duration = Date.now() - attemptStart;
+      console.log(`AXIOS_RETRY: attempt=${i + 1}/${maxRetries}, duration=${duration}ms, error_code=${err.code}, error_msg="${err.message}", status=${err.response?.status}`);
       if (i === maxRetries - 1) throw err;
-      await new Promise(resolve => setTimeout(resolve, 5000 * (i + 1)));
+      const waitTime = 5000 * (i + 1);
+      console.log(`AXIOS_WAIT: waiting ${waitTime}ms before retry`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
     }
   }
 }
@@ -88,8 +95,11 @@ async function fetchRacerData(person_id, year, clubsFile) {
     const regularHtml = await fetchWithRetry(regularUrl);
     
     if (regularHtml.includes('Just a moment') || regularHtml.includes('cloudflare')) {
+      console.log(`AXIOS_CLOUDFLARE: detected challenge, html_length=${regularHtml.length}, contains_just_moment=${regularHtml.includes('Just a moment')}, contains_cloudflare=${regularHtml.includes('cloudflare')}`);
       throw new Error('Cloudflare challenge detected - use Puppeteer fallback');
     }
+    
+    console.log(`AXIOS_HTML_OK: regular_page loaded, html_length=${regularHtml.length}`);
 
     // Extract data (same logic as Puppeteer version)
     const nameMatch = regularHtml.match(/<h1 class="article__header__title-opener">Points: ([^<]+)<\/h1>/);
@@ -119,7 +129,10 @@ async function fetchRacerData(person_id, year, clubsFile) {
       const cyclocrossHtml = await fetchWithRetry(cyclocrossUrl);
       
       if (!cyclocrossHtml.includes('Just a moment') && !cyclocrossHtml.includes('cloudflare')) {
+        console.log(`AXIOS_HTML_OK: cyclocross_page loaded, html_length=${cyclocrossHtml.length}`);
         cyclocrossData = processCyclocrossPoints(cyclocrossHtml);
+      } else {
+        console.log(`AXIOS_CLOUDFLARE: cyclocross challenge detected, html_length=${cyclocrossHtml.length}`);
       }
     } catch (err) {
       console.log(`[${person_id}] Failed to fetch cyclocross data: ${err.message}`);

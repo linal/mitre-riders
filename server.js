@@ -627,14 +627,32 @@ app.delete('/api/clubs/:clubName', verifyToken, (req, res) => {
 
 // Wrapper function with hybrid approach
 async function fetchRacerDataWrapper(person_id, year) {
+  const startTime = Date.now();
+  console.log(`[${person_id}] FETCH_START: person_id=${person_id}, year=${year}, env=${process.env.NODE_ENV}, timestamp=${new Date().toISOString()}`);
+  
   try {
     // Try axios first (faster, more reliable)
-    console.log(`[${person_id}] Using AXIOS method`);
-    return await fetchRacerDataAxios(person_id, year, CLUBS_FILE);
+    console.log(`[${person_id}] METHOD: AXIOS (attempt 1/2)`);
+    const result = await fetchRacerDataAxios(person_id, year, CLUBS_FILE);
+    const duration = Date.now() - startTime;
+    console.log(`[${person_id}] SUCCESS: AXIOS completed in ${duration}ms, points=${result.points}, races=${result.raceCount}`);
+    return result;
   } catch (err) {
-    console.log(`[${person_id}] AXIOS failed, switching to PUPPETEER: ${err.message}`);
-    // Fallback to Puppeteer for Cloudflare challenges
-    return await fetchRacerData(person_id, year, CLUBS_FILE);
+    const axiosDuration = Date.now() - startTime;
+    console.log(`[${person_id}] AXIOS_FAILED: duration=${axiosDuration}ms, error_type=${err.name}, error_msg="${err.message}", stack_trace=${err.stack?.split('\n')[0]}`);
+    
+    try {
+      console.log(`[${person_id}] METHOD: PUPPETEER (attempt 2/2)`);
+      const result = await fetchRacerData(person_id, year, CLUBS_FILE);
+      const totalDuration = Date.now() - startTime;
+      console.log(`[${person_id}] SUCCESS: PUPPETEER completed in ${totalDuration}ms (total), points=${result.points}, races=${result.raceCount}`);
+      return result;
+    } catch (puppeteerErr) {
+      const totalDuration = Date.now() - startTime;
+      console.log(`[${person_id}] PUPPETEER_FAILED: duration=${totalDuration}ms (total), error_type=${puppeteerErr.name}, error_msg="${puppeteerErr.message}", stack_trace=${puppeteerErr.stack?.split('\n')[0]}`);
+      console.log(`[${person_id}] FETCH_COMPLETE_FAILURE: both_methods_failed, total_duration=${totalDuration}ms`);
+      throw puppeteerErr;
+    }
   }
 }
 

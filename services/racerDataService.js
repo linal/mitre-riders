@@ -115,6 +115,8 @@ function processCyclocrossPoints(html) {
 
 // Main service function to fetch and process racer data
 async function fetchRacerData(person_id, year, clubsFile) {
+  const launchStart = Date.now();
+  console.log(`PUPPETEER_LAUNCH: starting browser, timeout=300000ms, protocol_timeout=300000ms`);
   const browser = await puppeteer.launch({
     headless: true,
     timeout: 300000,
@@ -129,6 +131,8 @@ async function fetchRacerData(person_id, year, clubsFile) {
       '--disable-gpu'
     ]
   });
+  const launchDuration = Date.now() - launchStart;
+  console.log(`PUPPETEER_LAUNCHED: browser ready in ${launchDuration}ms`);
   const page = await browser.newPage();
 
   await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
@@ -146,7 +150,10 @@ async function fetchRacerData(person_id, year, clubsFile) {
     // Fetch regular points
     const regularUrl = `https://www.britishcycling.org.uk/points?d=4&person_id=${person_id}&year=${year}`;
     console.log(`[${person_id}] PUPPETEER: Fetching regular points: ${regularUrl}`);
+    const gotoStart = Date.now();
     await page.goto(regularUrl, { waitUntil: 'networkidle2', timeout: 300000 });
+    const gotoDuration = Date.now() - gotoStart;
+    console.log(`PUPPETEER_GOTO: regular page loaded in ${gotoDuration}ms`);
     await new Promise(resolve => setTimeout(resolve, 5000));
 
     let regularHtml = await page.content();
@@ -193,7 +200,10 @@ async function fetchRacerData(person_id, year, clubsFile) {
       await new Promise(resolve => setTimeout(resolve, 3000));
       const cyclocrossUrl = `https://www.britishcycling.org.uk/points?d=6&person_id=${person_id}&year=${year}`;
       console.log(`[${person_id}] PUPPETEER: Fetching cyclocross points: ${cyclocrossUrl}`);
+      const cxGotoStart = Date.now();
       await page.goto(cyclocrossUrl, { waitUntil: 'networkidle2', timeout: 300000 });
+      const cxGotoDuration = Date.now() - cxGotoStart;
+      console.log(`PUPPETEER_GOTO: cyclocross page loaded in ${cxGotoDuration}ms`);
       await new Promise(resolve => setTimeout(resolve, 5000));
 
       let cyclocrossHtml = await page.content();
