@@ -162,12 +162,14 @@ async function fetchRacerData(person_id, year, clubsFile) {
       throw new Error('Chrome executable not found in container');
     }
     
+    console.log(`[${person_id}] CHROME_LAUNCH_ATTEMPT: Using ${foundChrome}`);
+    
     browser = await Promise.race([
       puppeteer.launch({
         headless: 'new',
-        timeout: 30000,
-        protocolTimeout: 30000,
-        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || foundChrome,
+        timeout: 15000,
+        protocolTimeout: 15000,
+        executablePath: foundChrome,
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
@@ -177,21 +179,48 @@ async function fetchRacerData(person_id, year, clubsFile) {
           '--disable-background-timer-throttling',
           '--disable-backgrounding-occluded-windows',
           '--disable-renderer-backgrounding',
-          '--disable-features=TranslateUI',
+          '--disable-features=TranslateUI,VizDisplayCompositor',
           '--disable-ipc-flooding-protection',
           '--memory-pressure-off',
-          '--max_old_space_size=4096'
+          '--single-process',
+          '--no-zygote',
+          '--disable-web-security',
+          '--disable-features=site-per-process',
+          '--max_old_space_size=512'
         ]
       }),
       new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Browser launch timeout after 30s')), 30000)
+        setTimeout(() => reject(new Error('Browser launch timeout after 15s')), 15000)
       )
     ]);
   } catch (err) {
     const launchDuration = Date.now() - launchStart;
+    const memInfo = process.memoryUsage();
     console.log(`[${person_id}] PUPPETEER_LAUNCH_FAILED: duration=${launchDuration}ms, error="${err.message}"`);
-    console.log(`[${person_id}] SYSTEM_INFO: memory=${process.memoryUsage().heapUsed / 1024 / 1024}MB, uptime=${process.uptime()}s`);
-    throw new Error(`Browser launch failed: ${err.message}`);
+    console.log(`[${person_id}] MEMORY_DETAILED: heap=${(memInfo.heapUsed/1024/1024).toFixed(1)}MB, rss=${(memInfo.rss/1024/1024).toFixed(1)}MB, external=${(memInfo.external/1024/1024).toFixed(1)}MB`);
+    console.log(`[${person_id}] SYSTEM_DETAILED: uptime=${process.uptime()}s, platform=${process.platform}, arch=${process.arch}`);
+    
+    // Try fallback with even more aggressive settings
+    console.log(`[${person_id}] CHROME_FALLBACK_ATTEMPT: Trying minimal Chrome config`);
+    try {
+      browser = await puppeteer.launch({
+        headless: true,
+        timeout: 10000,
+        executablePath: foundChrome,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--single-process',
+          '--no-zygote'
+        ]
+      });
+      console.log(`[${person_id}] CHROME_FALLBACK_SUCCESS: Minimal config worked`);
+    } catch (fallbackErr) {
+      console.log(`[${person_id}] CHROME_FALLBACK_FAILED: ${fallbackErr.message}`);
+      throw new Error(`Browser launch failed: ${err.message}`);
+    }
   }
   
   const launchDuration = Date.now() - launchStart;
