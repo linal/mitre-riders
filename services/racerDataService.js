@@ -167,8 +167,8 @@ async function fetchRacerData(person_id, year, clubsFile) {
     browser = await Promise.race([
       puppeteer.launch({
         headless: 'new',
-        timeout: 15000,
-        protocolTimeout: 15000,
+        timeout: 30000,
+        protocolTimeout: 30000,
         executablePath: foundChrome,
         args: [
           '--no-sandbox',
@@ -181,16 +181,15 @@ async function fetchRacerData(person_id, year, clubsFile) {
           '--disable-renderer-backgrounding',
           '--disable-features=TranslateUI,VizDisplayCompositor',
           '--disable-ipc-flooding-protection',
-          '--memory-pressure-off',
-          '--single-process',
-          '--no-zygote',
-          '--disable-web-security',
-          '--disable-features=site-per-process',
-          '--max_old_space_size=512'
+          '--disable-breakpad',
+          '--no-first-run',
+          '--no-default-browser-check',
+          '--js-flags=--max-old-space-size=384',
+          '--window-size=1280,720'
         ]
       }),
       new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Browser launch timeout after 15s')), 15000)
+        setTimeout(() => reject(new Error('Browser launch timeout after 30s')), 30000)
       )
     ]);
   } catch (err) {
