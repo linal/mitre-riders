@@ -1,0 +1,647 @@
+openapi: 3.0.3
+info:
+  title: BC Points App API
+  version: 1.0.0
+  description: |
+    API for retrieving and managing British Cycling points cache, racers list, and clubs metadata.
+    Protected endpoints require a Firebase ID token via HTTP Bearer authentication.
+servers:
+  - url: http://localhost:3001
+    description: Local development server
+  - url: https://{host}
+    variables:
+      host:
+        default: example.com
+        description: Deployment host
+security:
+  - firebaseAuth: []
+paths:
+  /api/race-data:
+    get:
+      summary: Get race data for a person and year (cached with TTL)
+      parameters:
+        - in: query
+          name: person_id
+          schema:
+            type: string
+          required: true
+          description: British Cycling person ID
+        - in: query
+          name: year
+          schema:
+            type: string
+            pattern: "^\\d{4}$"
+          required: true
+          description: Four-digit year
+      responses:
+        '200':
+          description: Aggregated race data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RaceData'
+        '400':
+          description: Missing parameters
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: Failed to fetch race data
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /api/racers:
+    get:
+      summary: Get configured racers list
+      responses:
+        '200':
+          description: Array of racers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Racer'
+    post:
+      summary: Replace racers list (protected)
+      security:
+        - firebaseAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/Racer'
+      responses:
+        '200':
+          description: Update result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  count:
+                    type: integer
+        '400':
+          description: Invalid format
+          content:
+            text/plain:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedJson'
+        '403':
+          $ref: '#/components/responses/ForbiddenJson'
+        '500':
+          description: Failed to update racers
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /api/racers/add:
+    post:
+      summary: Add a single racer by BC number (protected)
+      security:
+        - firebaseAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bc]
+              properties:
+                bc:
+                  type: string
+      responses:
+        '200':
+          description: Racer added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  bc:
+                    type: string
+                  count:
+                    type: integer
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedJson'
+        '403':
+          $ref: '#/components/responses/ForbiddenJson'
+        '500':
+          description: Failed to add racer
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+  /api/racers/{bc}:
+    delete:
+      summary: Remove a racer by BC number (protected)
+      security:
+        - firebaseAuth: []
+      parameters:
+        - in: path
+          name: bc
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Racer removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  bc:
+                    type: string
+                  count:
+                    type: integer
+        '400':
+          description: Missing BC number
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedJson'
+        '403':
+          $ref: '#/components/responses/ForbiddenJson'
+        '404':
+          description: BC number not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '500':
+          description: Failed to remove racer
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+  /api/build-cache:
+    post:
+      summary: Build cache for all racers or a specific racer (protected)
+      description: Builds and stores cache entries on disk and in memory.
+      security:
+        - firebaseAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [year]
+              properties:
+                year:
+                  type: string
+                  pattern: "^\\d{4}$"
+                racerId:
+                  type: string
+                  description: Optional BC number to build only that racer's cache
+      responses:
+        '200':
+          description: Build results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BuildCacheResult'
+        '400':
+          description: Missing year parameter
+          content:
+            text/plain:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedJson'
+        '403':
+          $ref: '#/components/responses/ForbiddenJson'
+        '404':
+          description: Racer not found when racerId provided
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        '500':
+          description: Failed to build cache
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /api/all-race-data:
+    get:
+      summary: Get all race data for configured racers from cache only
+      parameters:
+        - in: query
+          name: year
+          required: true
+          schema:
+            type: string
+            pattern: "^\\d{4}$"
+      responses:
+        '200':
+          description: Map of racerId to race data or placeholder with error
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  anyOf:
+                    - $ref: '#/components/schemas/RaceData'
+                    - $ref: '#/components/schemas/MissingRaceData'
+        '400':
+          description: Missing year parameter
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: Failed to fetch race data
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /api/cache/{year}:
+    get:
+      summary: List cache files for a year
+      parameters:
+        - in: path
+          name: year
+          required: true
+          schema:
+            type: string
+            pattern: "^\\d{4}$"
+      responses:
+        '200':
+          description: Cache files
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  files:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CacheFile'
+        '400':
+          description: Invalid year format
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: Failed to list cache files
+          content:
+            text/plain:
+              schema:
+                type: string
+    delete:
+      summary: Delete cache files for a year (protected)
+      security:
+        - firebaseAuth: []
+      parameters:
+        - in: path
+          name: year
+          required: true
+          schema:
+            type: string
+            pattern: "^\\d{4}$"
+      responses:
+        '200':
+          description: Deletion result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  totalFiles:
+                    type: integer
+                  removedFiles:
+                    type: integer
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        file:
+                          type: string
+                        error:
+                          type: string
+        '400':
+          description: Invalid year format
+          content:
+            text/plain:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedJson'
+        '403':
+          $ref: '#/components/responses/ForbiddenJson'
+        '500':
+          description: Failed to remove cache files
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /api/clubs:
+    get:
+      summary: Get club names from cache
+      responses:
+        '200':
+          description: Array of club names
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        '500':
+          description: Failed to fetch club names
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /api/clubs-file:
+    get:
+      summary: Get clubs data file
+      responses:
+        '200':
+          description: Clubs object keyed by club name
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  $ref: '#/components/schemas/Club'
+        '500':
+          description: Failed to fetch clubs file
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /api/clubs/{clubName}:
+    delete:
+      summary: Delete a club from clubs cache (protected)
+      security:
+        - firebaseAuth: []
+      parameters:
+        - in: path
+          name: clubName
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Club removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  remainingClubs:
+                    type: integer
+        '400':
+          description: Missing club name
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedJson'
+        '403':
+          $ref: '#/components/responses/ForbiddenJson'
+        '404':
+          description: Club not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        '500':
+          description: Failed to remove club
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
+components:
+  securitySchemes:
+    firebaseAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Firebase ID token in the Authorization header (Bearer <token>)
+  responses:
+    UnauthorizedJson:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    ForbiddenJson:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+  schemas:
+    Racer:
+      type: object
+      properties:
+        bc:
+          type: string
+        name:
+          type: string
+        club:
+          type: string
+    RaceData:
+      type: object
+      properties:
+        raceCount:
+          type: integer
+        points:
+          type: integer
+        roadAndTrackPoints:
+          type: integer
+        cyclocrossPoints:
+          type: integer
+        roadAndTrackRaceCount:
+          type: integer
+        cyclocrossRaceCount:
+          type: integer
+        category:
+          type: string
+        name:
+          type: string
+        club:
+          type: string
+        clubId:
+          type: string
+        regionalPoints:
+          type: integer
+        nationalPoints:
+          type: integer
+        roadRegionalPoints:
+          type: integer
+        roadNationalPoints:
+          type: integer
+        cxRegionalPoints:
+          type: integer
+        cxNationalPoints:
+          type: integer
+    MissingRaceData:
+      type: object
+      properties:
+        raceCount:
+          type: integer
+          example: 0
+        points:
+          type: integer
+          example: 0
+        roadAndTrackPoints:
+          type: integer
+          example: 0
+        cyclocrossPoints:
+          type: integer
+          example: 0
+        roadAndTrackRaceCount:
+          type: integer
+          example: 0
+        cyclocrossRaceCount:
+          type: integer
+          example: 0
+        category:
+          type: string
+          example: ""
+        name:
+          type: string
+          example: "Unknown"
+        club:
+          type: string
+          example: "Unknown"
+        error:
+          type: string
+          example: "No cached data available"
+    BuildCacheResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        totalRacers:
+          type: integer
+        cached:
+          type: integer
+        failed:
+          type: integer
+        skipped:
+          type: integer
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              racerId:
+                type: string
+              name:
+                type: string
+              status:
+                type: string
+                enum: [cached, failed]
+              error:
+                type: string
+    CacheFile:
+      type: object
+      properties:
+        filename:
+          type: string
+        racerId:
+          type: string
+        year:
+          type: string
+        lastBuilt:
+          type: number
+          description: Unix epoch milliseconds
+    Club:
+      type: object
+      properties:
+        id:
+          type: string
+        members:
+          type: array
+          items:
+            type: string
+
