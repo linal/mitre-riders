@@ -332,6 +332,16 @@ app.post('/api/build-cache', verifyToken, async (req, res) => {
           name: result.name,
           status: 'cached'
         });
+
+        // Update racers file with fetched name
+        try {
+          if (result.name && (!racer.name || racer.name !== result.name)) {
+            racer.name = result.name;
+            fs.writeFileSync(RACERS_FILE, JSON.stringify(racers, null, 2), 'utf8');
+          }
+        } catch (writeErr) {
+          console.error(`Error updating racers file with name for ${racerId}:`, writeErr.message);
+        }
       } catch (err) {
         results.failed++;
         results.details.push({
@@ -363,10 +373,19 @@ app.post('/api/build-cache', verifyToken, async (req, res) => {
           results.cached++;
           results.details.push({
             racerId,
-            name: racer.name,
+            name: result.name,
             status: 'cached'
           });
 
+          // Update racers file with fetched name
+          try {
+            if (result.name && (!racer.name || racer.name !== result.name)) {
+              racer.name = result.name;
+              fs.writeFileSync(RACERS_FILE, JSON.stringify(racers, null, 2), 'utf8');
+            }
+          } catch (writeErr) {
+            console.error(`Error updating racers file with name for ${racerId}:`, writeErr.message);
+          }
         } catch (err) {
           results.failed++;
           results.details.push({
