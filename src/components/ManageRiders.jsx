@@ -184,13 +184,15 @@ const ManageRiders = () => {
               <thead>
                 <tr className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
                   <th className="px-4 py-2 text-left">BC Number</th>
+                  <th className="px-4 py-2 text-left">Name</th>
                   <th className="px-4 py-2 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {riders.map((rider) => (
                   <tr key={rider.bc} className={`border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                    <td className="px-4 py-2">{rider.bc}</td>
+                    <td className="px-4 py-2 font-mono">{rider.bc}</td>
+                    <td className="px-4 py-2">{rider.name || '-'}</td>
                     <td className="px-4 py-2 text-right">
                       <button
                         onClick={() => handleRemoveRider(rider.bc)}
