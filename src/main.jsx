@@ -15,6 +15,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import AuthStatus from './components/AuthStatus';
 import './index.css';
 import './firebase'; // Import Firebase configuration
+import CompareRiders from './components/CompareRiders';
 
 // Create Theme Context
 export const ThemeContext = createContext();
@@ -60,6 +61,9 @@ const Navigation = ({ darkMode, toggleDarkMode }) => {
           </Link>
           <Link to="/about" className={`px-3 py-1 rounded text-sm ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
             About
+          </Link>
+          <Link to="/compare" className={`px-3 py-1 rounded text-sm ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
+            Compare
           </Link>
           
           {/* Dark mode toggle */}
@@ -175,6 +179,7 @@ const App = () => {
             <Route path="/" element={<ClubsList />} />
             <Route path="/clubs/:clubName/riders" element={<ClubRiders />} />
             <Route path="/clubs/:clubName/summary" element={<ClubSummary />} />
+            <Route path="/compare" element={<CompareRiders />} />
             <Route path="/cache" element={
               <ProtectedRoute>
                 <CacheManager />
