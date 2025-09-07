@@ -1,5 +1,6 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs');
+const path = require('path');
 
 // Helper function to process regular points from HTML
 function processRegularPoints(html) {
@@ -144,53 +145,100 @@ async function fetchRacerData(person_id, year, clubsFile) {
   
   try {
     console.log(`[${person_id}] PUPPETEER_ENV: NODE_ENV=${process.env.NODE_ENV}, Platform=${process.platform}`);
-    
-    // Check for Chrome installation
-    const fs = require('fs');
-    const chromePaths = ['/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser'];
-    
-    for (const path of chromePaths) {
-      if (fs.existsSync(path)) {
-        foundChrome = path;
-        console.log(`[${person_id}] CHROME_EXECUTABLE_FOUND: ${path}`);
-        break;
+
+    // Resolve Chrome/Edge executable cross-platform. If not found, fall back to Puppeteer's bundled Chromium.
+    function resolveChromeExecutable() {
+      if (process.env.CHROME_EXECUTABLE && fs.existsSync(process.env.CHROME_EXECUTABLE)) {
+        return process.env.CHROME_EXECUTABLE;
       }
+
+      const platform = process.platform;
+      if (platform === 'linux') {
+        const linuxPaths = [
+          '/usr/bin/google-chrome',
+          '/usr/bin/google-chrome-stable',
+          '/usr/bin/chromium',
+          '/usr/bin/chromium-browser'
+        ];
+        for (const p of linuxPaths) {
+          if (fs.existsSync(p)) return p;
+        }
+        return null;
+      }
+
+      if (platform === 'win32') {
+        const candidates = [];
+        const programFiles = process.env['PROGRAMFILES'];
+        const programFilesX86 = process.env['PROGRAMFILES(X86)'];
+        const localAppData = process.env['LOCALAPPDATA'];
+        if (programFiles) {
+          candidates.push(path.join(programFiles, 'Google', 'Chrome', 'Application', 'chrome.exe'));
+          candidates.push(path.join(programFiles, 'Microsoft', 'Edge', 'Application', 'msedge.exe'));
+        }
+        if (programFilesX86) {
+          candidates.push(path.join(programFilesX86, 'Google', 'Chrome', 'Application', 'chrome.exe'));
+          candidates.push(path.join(programFilesX86, 'Microsoft', 'Edge', 'Application', 'msedge.exe'));
+        }
+        if (localAppData) {
+          candidates.push(path.join(localAppData, 'Google', 'Chrome', 'Application', 'chrome.exe'));
+          candidates.push(path.join(localAppData, 'Microsoft', 'Edge', 'Application', 'msedge.exe'));
+        }
+        for (const p of candidates) {
+          if (fs.existsSync(p)) return p;
+        }
+        return null;
+      }
+
+      if (platform === 'darwin') {
+        const macPaths = [
+          '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+          '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge'
+        ];
+        for (const p of macPaths) {
+          if (fs.existsSync(p)) return p;
+        }
+        return null;
+      }
+
+      return null;
     }
-    
-    if (!foundChrome) {
-      console.log(`[${person_id}] CHROME_NOT_FOUND: Checked paths: ${chromePaths.join(', ')}`);
-      throw new Error('Chrome executable not found in container');
+
+    foundChrome = resolveChromeExecutable();
+    if (foundChrome) {
+      console.log(`[${person_id}] CHROME_EXECUTABLE_FOUND: ${foundChrome}`);
+    } else {
+      console.log(`[${person_id}] CHROME_NOT_FOUND: Falling back to Puppeteer's bundled Chromium`);
     }
-    
-    console.log(`[${person_id}] CHROME_LAUNCH_ATTEMPT: Using ${foundChrome}`);
-    
+
+    const launchOptions = {
+      headless: 'new',
+      timeout: 30000,
+      protocolTimeout: 30000,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--disable-extensions',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
+        '--disable-features=TranslateUI,VizDisplayCompositor',
+        '--disable-ipc-flooding-protection',
+        '--disable-breakpad',
+        '--no-first-run',
+        '--no-default-browser-check',
+        '--js-flags=--max-old-space-size=384',
+        '--window-size=1280,720'
+      ]
+    };
+    if (foundChrome) {
+      launchOptions.executablePath = foundChrome;
+    }
+
     browser = await Promise.race([
-      puppeteer.launch({
-        headless: 'new',
-        timeout: 30000,
-        protocolTimeout: 30000,
-        executablePath: foundChrome,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu',
-          '--disable-extensions',
-          '--disable-background-timer-throttling',
-          '--disable-backgrounding-occluded-windows',
-          '--disable-renderer-backgrounding',
-          '--disable-features=TranslateUI,VizDisplayCompositor',
-          '--disable-ipc-flooding-protection',
-          '--disable-breakpad',
-          '--no-first-run',
-          '--no-default-browser-check',
-          '--js-flags=--max-old-space-size=384',
-          '--window-size=1280,720'
-        ]
-      }),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Browser launch timeout after 30s')), 30000)
-      )
+      puppeteer.launch(launchOptions),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Browser launch timeout after 30s')), 30000))
     ]);
   } catch (err) {
     const launchDuration = Date.now() - launchStart;
@@ -199,18 +247,22 @@ async function fetchRacerData(person_id, year, clubsFile) {
     console.log(`[${person_id}] MEMORY_DETAILED: heap=${(memInfo.heapUsed/1024/1024).toFixed(1)}MB, rss=${(memInfo.rss/1024/1024).toFixed(1)}MB, external=${(memInfo.external/1024/1024).toFixed(1)}MB`);
     console.log(`[${person_id}] SYSTEM_DETAILED: uptime=${process.uptime()}s, platform=${process.platform}, arch=${process.arch}`);
     
-    // Check if Chrome processes are running
+    // Check if Chrome processes are running (best-effort, platform-specific)
     try {
       const { execSync } = require('child_process');
-      const processes = execSync('ps aux | grep chrome || true', { encoding: 'utf8' });
-      console.log(`[${person_id}] CHROME_PROCESSES: ${processes.split('\n').length - 1} processes found`);
+      if (process.platform === 'win32') {
+        const processes = execSync('tasklist | findstr /I "chrome msedge chromium"', { encoding: 'utf8' });
+        console.log(`[${person_id}] CHROME_PROCESSES_WIN: ${processes.split('\n').filter(Boolean).length} lines`);
+      } else {
+        const processes = execSync('ps aux | grep -E "(chrome|chromium|msedge)" || true', { encoding: 'utf8' });
+        console.log(`[${person_id}] CHROME_PROCESSES_UNIX: ${processes.split('\n').length - 1} processes found`);
+      }
     } catch (psErr) {
       console.log(`[${person_id}] PROCESS_CHECK_FAILED: ${psErr.message}`);
     }
-    
-    // Skip fallback - Chrome launch is fundamentally failing
-    console.log(`[${person_id}] CHROME_LAUNCH_ABANDONED: Container resources insufficient for Chrome`);
-    throw new Error(`Chrome cannot start in this container environment: ${err.message}`);
+
+    // Surface the original launch error
+    throw new Error(`Browser launch failed: ${err.message}`);
   }
   
   const launchDuration = Date.now() - launchStart;
