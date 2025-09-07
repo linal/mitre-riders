@@ -1,0 +1,379 @@
+uiSpecVersion: 1.0.0
+app:
+  name: British Cycling Club Viewer
+  description: UI specification mapping pages/routes to behaviors and backend endpoints
+  framework:
+    library: react
+    version: "18"
+    router: react-router-dom@6
+    bundler: vite@4
+    styling: tailwindcss
+  auth:
+    provider: Firebase Authentication
+    mechanism: Protected routes via component `ProtectedRoute`; Bearer ID token on protected API calls
+    tokenHeader: "Authorization: Bearer <FirebaseIDToken>"
+  api:
+    openapiSpecPath: .agent/openapi.yaml
+    baseUrlResolutionOrder:
+      - envVar: VITE_API_BASE_URL
+      - window.location.origin
+      - fallback: http://localhost:3001
+
+navigation:
+  # Top nav and settings menu entries (settings only when authenticated)
+  primary:
+    - label: Clubs
+      to: "/"
+    - label: About
+      to: "/about"
+  settingsWhenAuthenticated:
+    - label: Cache Manager
+      to: "/cache"
+    - label: Manage Riders
+      to: "/manage-riders"
+    - label: Manage Clubs
+      to: "/manage-clubs"
+
+routes:
+  - path: "/"
+    name: Clubs
+    component: ClubsList
+    authRequired: false
+    usesThemeContext: true
+    data:
+      fetch:
+        - method: GET
+          path: "/api/clubs"
+          baseUrl: resolved
+          auth: false
+          response:
+            type: array
+            items: string
+          stateUpdates:
+            - setClubs(response)
+            - setLoading(false)
+      onMount: true
+    ui:
+      summary: Grid of club names linking to riders view for a club
+      interactions:
+        - label: Club tile
+          action: Navigate to "/clubs/{clubName}/riders"
+          params:
+            - name: clubName
+              source: selected club name (URL-encoded)
+
+  - path: "/clubs/:clubName/riders"
+    name: Club Riders
+    component: ClubRiders
+    authRequired: false
+    usesThemeContext: true
+    params:
+      - name: clubName
+        required: true
+    query:
+      - name: year
+        default: "2025"
+      - name: sort
+        default: name
+        allowedValues: [name, races, roadAndTrackRaceCount, cyclocrossRaceCount, roadAndTrack, roadRegional, roadNational, cyclocross, cxRegional, cxNational, category]
+      - name: filter
+        default: ""
+      - name: raceType
+        default: all
+        allowedValues: [all, roadAndTrack, cyclocross]
+      - name: category
+        default: ""
+        notes: "Use 'unlicensed' to filter riders without category"
+    data:
+      fetch:
+        - method: GET
+          path: "/api/all-race-data"
+          query: [{ name: year, from: query.year }]
+          baseUrl: resolved
+          auth: false
+          on:
+            - mount
+            - change(year)
+            - change(params.clubName)
+          response:
+            type: object
+            additionalProperties: RaceData | MissingRaceData
+          stateUpdates:
+            - setData(response)
+            - setUniqueClubs(uniq(sort(map(response[*].club))))
+            - setLoading(false)
+    behaviors:
+      - Update URL search params when filters change (year, sort, filter, raceType, category)
+      - Client-side filtering by name, club (from :clubName), category, and raceType
+      - Client-side sorting by selected sort key
+      - Summary totals computed client-side
+      - Rider cards include external links to British Cycling results (no API call)
+    ui:
+      controls:
+        - Year selector with Refresh button (triggers fetch)
+        - Text filter input (name)
+        - Sort dropdown (see allowed values)
+        - Race type dropdown (all | roadAndTrack | cyclocross)
+        - Category dropdown (1st, 2nd, 3rd, 4th, unlicensed)
+        - Clear Filters button (resets to defaults and updates URL)
+      navigation:
+        - label: View Summary
+          to: "/clubs/{clubName}/summary"
+
+  - path: "/clubs/:clubName/summary"
+    name: Club Summary
+    component: ClubSummary
+    authRequired: false
+    usesThemeContext: true
+    params:
+      - name: clubName
+        required: true
+    query:
+      - name: year
+        default: currentYear
+    data:
+      fetch:
+        - method: GET
+          path: "/api/all-race-data"
+          query: [{ name: year, from: query.year }]
+          baseUrl: resolved
+          auth: false
+          on: [mount, change(year), change(params.clubName)]
+          response: object
+          stateUpdates:
+            - setData(response)
+            - calculateSummary(response) -> setSummary
+        - method: GET
+          path: "/api/all-race-data"
+          query: [{ name: year, from: (parseInt(query.year)-1).toString() }]
+          baseUrl: resolved
+          auth: false
+          on: [after previous fetch]
+          response: object
+          stateUpdates:
+            - setPrevYearData(response)
+            - calculateSummary(response) -> setPrevYearSummary
+    behaviors:
+      - Toggle year-over-year comparison visibility
+      - Refresh button triggers both current and previous year fetches
+      - All aggregations are computed client-side then rendered
+    ui:
+      navigation:
+        - label: View Riders
+          to: "/clubs/{clubName}/riders"
+
+  - path: "/cache"
+    name: Cache Manager
+    component: CacheManager
+    authRequired: true
+    usesThemeContext: true
+    query: []
+    data:
+      fetch:
+        - method: GET
+          path: "/api/racers"
+          baseUrl: resolved
+          auth: false
+          on: [mount]
+          response:
+            type: array
+            items: Racer
+          stateUpdates:
+            - setRacers(response)
+        - method: GET
+          path: "/api/cache/{year}"
+          params: [{ name: year, from: state.selectedYear }]
+          baseUrl: resolved
+          auth: false
+          on: [mount, change(selectedYear), Refresh]
+          response: { count: number, files: CacheFile[] }
+          stateUpdates:
+            - setCacheData(response)
+    actions:
+      - label: Delete Cache (selected year)
+        call:
+          method: DELETE
+          path: "/api/cache/{year}"
+          params: [{ name: year, from: state.selectedYear }]
+          baseUrl: resolved
+          auth: true
+          headers: { Authorization: "Bearer <FirebaseIDToken>" }
+        onSuccess:
+          - setMessage(success)
+          - fetch cache again
+      - label: Build All Cache (year)
+        call:
+          method: POST
+          path: "/api/build-cache"
+          baseUrl: resolved
+          auth: true
+          headers: { Authorization: "Bearer <FirebaseIDToken>", "Content-Type": "application/json" }
+          body: { year: state.selectedYear }
+        onSuccess:
+          - setMessage(success)
+          - fetch cache again
+      - label: Build Racer Cache
+        call:
+          method: POST
+          path: "/api/build-cache"
+          baseUrl: resolved
+          auth: true
+          headers: { Authorization: "Bearer <FirebaseIDToken>", "Content-Type": "application/json" }
+          body: { year: state.selectedYear, racerId: state.selectedRacer }
+        onSuccess:
+          - setMessage(success)
+          - fetch cache again
+    ui:
+      controls:
+        - Year dropdown (current year and previous 9 years)
+        - Refresh button (re-fetches cache list)
+        - Build All Cache button (protected)
+        - Delete Cache button (protected; enabled when count>0)
+        - Racer search with dropdown; Build Racer Cache button (protected)
+
+  - path: "/manage-riders"
+    name: Manage Riders
+    component: ManageRiders
+    authRequired: true
+    usesThemeContext: true
+    data:
+      fetch:
+        - method: GET
+          path: "/api/racers"
+          baseUrl: resolvedOrRelative
+          auth: false
+          on: [mount, after add/remove]
+          response:
+            type: array
+            items: Racer
+          stateUpdates:
+            - setRiders(response)
+    actions:
+      - label: Add Rider
+        call:
+          method: POST
+          path: "/api/racers/add"
+          baseUrl: resolvedOrRelative
+          auth: true
+          headers: { Authorization: "Bearer <FirebaseIDToken>", "Content-Type": "application/json" }
+          body: { bc: input.bcNumber }
+        onSuccess:
+          - clear input
+          - show success message
+          - refresh riders list
+      - label: Remove Rider
+        call:
+          method: DELETE
+          path: "/api/racers/{bc}"
+          params: [{ name: bc, from: selected.rider.bc }]
+          baseUrl: resolvedOrRelative
+          auth: true
+          headers: { Authorization: "Bearer <FirebaseIDToken>" }
+        onSuccess:
+          - show success message
+          - refresh riders list
+
+  - path: "/manage-clubs"
+    name: Manage Clubs
+    component: ClubsManager
+    authRequired: true
+    usesThemeContext: true
+    data:
+      fetch:
+        - method: GET
+          path: "/api/clubs"
+          baseUrl: resolvedOrRelative
+          auth: false
+          on: [mount, after delete]
+          response:
+            type: array
+            items: string
+          stateUpdates:
+            - setClubs(response)
+    actions:
+      - label: Delete Club
+        call:
+          method: DELETE
+          path: "/api/clubs/{clubName}"
+          params: [{ name: clubName, from: selected.club }]
+          baseUrl: resolvedOrRelative
+          auth: true
+          headers: { Authorization: "Bearer <FirebaseIDToken>" }
+        onSuccess:
+          - show status
+          - refresh clubs list
+
+  - path: "/about"
+    name: About
+    component: About
+    authRequired: false
+    usesThemeContext: true
+    data: { fetch: [] }
+
+  - path: "/login"
+    name: Login
+    component: Login
+    authRequired: false
+    data:
+      fetch: []
+    behaviors:
+      - Google sign-in via Firebase `signInWithPopup`
+      - On auth state change, redirect to "/"
+
+  - path: "/register"
+    name: Register User
+    component: RegisterUser
+    authRequired: false
+    data:
+      fetch: []
+    behaviors:
+      - Google sign-up via Firebase `signInWithPopup`
+      - On auth state change, redirect to "/"
+
+components:
+  context:
+    - name: ThemeContext
+      provides: { darkMode: boolean, toggleDarkMode: function }
+      usedBy: [ClubsList, ClubRiders, ClubSummary, CacheManager, ManageRiders, ClubsManager, About]
+  shared:
+    - name: FilterControls
+      usedBy: [ClubRiders]
+      purpose: Filter and refresh controls for riders list
+    - name: RiderCard
+      usedBy: [ClubRiders]
+      purpose: Displays per-rider statistics and external links
+
+types:
+  Racer:
+    bc: string
+    name: string
+    club: string
+  RaceData:
+    raceCount: number
+    points: number
+    roadAndTrackPoints: number
+    cyclocrossPoints: number
+    roadAndTrackRaceCount: number
+    cyclocrossRaceCount: number
+    category: string
+    name: string
+    club: string
+    clubId: string
+    regionalPoints: number
+    nationalPoints: number
+    roadRegionalPoints: number
+    roadNationalPoints: number
+    cxRegionalPoints: number
+    cxNationalPoints: number
+  CacheFile:
+    filename: string
+    racerId: string
+    year: string
+    lastBuilt: number
+
+notes:
+  - Protected endpoints require attaching the Firebase ID token in the Authorization header
+  - Some components use relative paths (e.g., "/api/racers"); others resolve base URL using VITE_API_BASE_URL or window.location.origin
+  - For new code, prefer consistent base URL resolution as described in `api.baseUrlResolutionOrder`
+
+
