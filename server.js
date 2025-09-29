@@ -121,7 +121,7 @@ loadRacers();
 
 // Original endpoint for single racer data
 app.get('/api/race-data', async (req, res) => {
-  const { person_id, year } = req.query;
+  const { person_id, year, discipline = 'both' } = req.query;
   if (!person_id || !year) {
     return res.status(400).send("Missing parameters");
   }
@@ -164,7 +164,7 @@ app.get('/api/race-data', async (req, res) => {
   console.log(`Cache MISS for ${cacheKey}. Cache duration: ${cacheDurationMinutes} minutes`);
 
   try {
-    const result = await fetchRacerDataWrapper(person_id, year);
+    const result = await fetchRacerDataWrapper(person_id, year, discipline);
     const cacheEntry = { data: result, timestamp: now };
 
     // Update memory cache
@@ -284,7 +284,7 @@ app.delete('/api/racers/:bc', verifyToken, (req, res) => {
 
 // New endpoint to build cache for all racers - PROTECTED
 app.post('/api/build-cache', verifyToken, async (req, res) => {
-  const { year, racerId } = req.body || req.query;
+  const { year, racerId, discipline = 'both' } = req.body || req.query;
 
   if (!year) {
     return res.status(400).send("Missing year parameter");
@@ -317,7 +317,7 @@ app.post('/api/build-cache', verifyToken, async (req, res) => {
 
       try {
         // Fetch data from BC API
-        const result = await fetchRacerDataWrapper(racerId, year);
+        const result = await fetchRacerDataWrapper(racerId, year, discipline);
         const cacheEntry = { data: result, timestamp: now };
 
         // Update memory cache
@@ -361,7 +361,7 @@ app.post('/api/build-cache', verifyToken, async (req, res) => {
 
         try {
           // Fetch data from BC API
-          const result = await fetchRacerDataWrapper(racerId, year);
+          const result = await fetchRacerDataWrapper(racerId, year, discipline);
           const cacheEntry = { data: result, timestamp: now };
 
           // Update memory cache
@@ -645,8 +645,8 @@ app.delete('/api/clubs/:clubName', verifyToken, (req, res) => {
 });
 
 // Wrapper function using only puppeteer
-async function fetchRacerDataWrapper(person_id, year) {
-  return await fetchRacerData(person_id, year, CLUBS_FILE);
+async function fetchRacerDataWrapper(person_id, year, discipline = 'both') {
+  return await fetchRacerData(person_id, year, CLUBS_FILE, discipline);
 }
 
 // Serve React app for all unmatched routes

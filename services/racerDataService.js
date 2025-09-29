@@ -2,6 +2,42 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 
+// Debug function to save page content when running locally
+function saveDebugPageContent(url, html, person_id, discipline, requestType = 'unknown') {
+  // Only save debug files when running locally
+  if (process.env.NODE_ENV === 'production') {
+    return;
+  }
+
+  try {
+    const debugDir = path.join(__dirname, '..', 'debug');
+    if (!fs.existsSync(debugDir)) {
+      fs.mkdirSync(debugDir, { recursive: true });
+    }
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const disciplinePrefix = discipline === 'both' ? 'all' : discipline;
+    const filename = `bc_page_${disciplinePrefix}_${requestType}_${person_id}_${timestamp}.json`;
+    const filepath = path.join(debugDir, filename);
+
+    const debugData = {
+      timestamp: new Date().toISOString(),
+      person_id: person_id,
+      discipline: discipline,
+      request_type: requestType,
+      url: url,
+      html_length: html ? html.length : 0,
+      html_preview: html ? html.substring(0, 1000) : null,
+      full_html: html
+    };
+
+    fs.writeFileSync(filepath, JSON.stringify(debugData, null, 2), 'utf8');
+    console.log(`[${person_id}] DEBUG_PAGE_SAVED: ${filepath}`);
+  } catch (err) {
+    console.error(`[${person_id}] DEBUG_PAGE_SAVE_ERROR: ${err.message}`);
+  }
+}
+
 // Helper function to process regular points from HTML
 function processRegularPoints(html) {
   console.log('PROCESS_REGULAR: Starting HTML processing');
@@ -133,9 +169,9 @@ function processCyclocrossPoints(html) {
 }
 
 // Main service function to fetch and process racer data
-async function fetchRacerData(person_id, year, clubsFile) {
+async function fetchRacerData(person_id, year, clubsFile, discipline = 'both') {
   const startTime = Date.now();
-  console.log(`[${person_id}] PUPPETEER_START: timestamp=${new Date().toISOString()}, person_id=${person_id}, year=${year}`);
+  console.log(`[${person_id}] PUPPETEER_START: timestamp=${new Date().toISOString()}, person_id=${person_id}, year=${year}, discipline=${discipline}`);
   
   const launchStart = Date.now();
   console.log(`[${person_id}] PUPPETEER_LAUNCH: starting browser, timeout=300000ms, protocol_timeout=300000ms`);
@@ -310,18 +346,23 @@ async function fetchRacerData(person_id, year, clubsFile) {
     await new Promise(resolve => setTimeout(resolve, 5000));
     console.log(`[${person_id}] PUPPETEER_WAIT: 5s wait completed`);
 
-    let regularHtml = await page.content();
-    console.log(`[${person_id}] Regular HTML length: ${regularHtml.length}`);
-    
-    // Log key HTML sections for LLM analysis
-    const titleMatch = regularHtml.match(/<title[^>]*>([^<]*)<\/title>/i);
-    console.log(`[${person_id}] PAGE_TITLE: ${titleMatch ? titleMatch[1] : 'Not found'}`);
-    
-    const bodyStart = regularHtml.indexOf('<body');
-    const bodyContent = bodyStart !== -1 ? regularHtml.substring(bodyStart, bodyStart + 1000) : 'Body not found';
-    console.log(`[${person_id}] BODY_START: ${bodyContent.replace(/\n/g, ' ').replace(/\s+/g, ' ')}`);
-    
-    if (regularHtml.includes('Just a moment') || regularHtml.includes('cloudflare')) {
+      let regularHtml = await page.content();
+      console.log(`[${person_id}] Regular HTML length: ${regularHtml.length}`);
+      
+      // Save debug page content if running locally
+      if (process.env.NODE_ENV !== 'production') {
+        saveDebugPageContent(regularUrl, regularHtml, person_id, discipline, 'road-track');
+      }
+      
+      // Log key HTML sections for LLM analysis
+      const titleMatch = regularHtml.match(/<title[^>]*>([^<]*)<\/title>/i);
+      console.log(`[${person_id}] PAGE_TITLE: ${titleMatch ? titleMatch[1] : 'Not found'}`);
+      
+      const bodyStart = regularHtml.indexOf('<body');
+      const bodyContent = bodyStart !== -1 ? regularHtml.substring(bodyStart, bodyStart + 1000) : 'Body not found';
+      console.log(`[${person_id}] BODY_START: ${bodyContent.replace(/\n/g, ' ').replace(/\s+/g, ' ')}`);
+      
+      if (regularHtml.includes('Just a moment') || regularHtml.includes('cloudflare')) {
       console.log(`[${person_id}] CLOUDFLARE_DETECTED: Challenge page detected`);
       const cfContent = regularHtml.substring(0, 2000).replace(/\n/g, ' ').replace(/\s+/g, ' ');
       console.log(`[${person_id}] CLOUDFLARE_HTML: ${cfContent}`);
@@ -399,21 +440,26 @@ async function fetchRacerData(person_id, year, clubsFile) {
       await new Promise(resolve => setTimeout(resolve, 5000));
       console.log(`[${person_id}] PUPPETEER_CX_WAIT: 5s wait completed`);
 
-      let cyclocrossHtml = await page.content();
-      console.log(`[${person_id}] Cyclocross HTML length: ${cyclocrossHtml.length}`);
-      
-      // Log cyclocross page structure
-      const cxTitleMatch = cyclocrossHtml.match(/<title[^>]*>([^<]*)<\/title>/i);
-      console.log(`[${person_id}] CX_PAGE_TITLE: ${cxTitleMatch ? cxTitleMatch[1] : 'Not found'}`);
-      
-      const cxTableMatch = cyclocrossHtml.match(/<table[^>]*>.*?<\/table>/s);
-      console.log(`[${person_id}] CX_TABLE_FOUND: ${!!cxTableMatch}`);
-      if (cxTableMatch) {
-        const tablePreview = cxTableMatch[0].substring(0, 500).replace(/\n/g, ' ').replace(/\s+/g, ' ');
-        console.log(`[${person_id}] CX_TABLE_PREVIEW: ${tablePreview}`);
-      }
-      
-      if (cyclocrossHtml.includes('Just a moment') || cyclocrossHtml.includes('cloudflare')) {
+        let cyclocrossHtml = await page.content();
+        console.log(`[${person_id}] Cyclocross HTML length: ${cyclocrossHtml.length}`);
+        
+        // Save debug page content if running locally
+        if (process.env.NODE_ENV !== 'production') {
+          saveDebugPageContent(cyclocrossUrl, cyclocrossHtml, person_id, discipline, 'cyclocross');
+        }
+        
+        // Log cyclocross page structure
+        const cxTitleMatch = cyclocrossHtml.match(/<title[^>]*>([^<]*)<\/title>/i);
+        console.log(`[${person_id}] CX_PAGE_TITLE: ${cxTitleMatch ? cxTitleMatch[1] : 'Not found'}`);
+        
+        const cxTableMatch = cyclocrossHtml.match(/<table[^>]*>.*?<\/table>/s);
+        console.log(`[${person_id}] CX_TABLE_FOUND: ${!!cxTableMatch}`);
+        if (cxTableMatch) {
+          const tablePreview = cxTableMatch[0].substring(0, 500).replace(/\n/g, ' ').replace(/\s+/g, ' ');
+          console.log(`[${person_id}] CX_TABLE_PREVIEW: ${tablePreview}`);
+        }
+        
+        if (cyclocrossHtml.includes('Just a moment') || cyclocrossHtml.includes('cloudflare')) {
         console.log(`[${person_id}] CX_CLOUDFLARE_DETECTED: Challenge page detected`);
         await new Promise(resolve => setTimeout(resolve, 20000));
         cyclocrossHtml = await page.content();

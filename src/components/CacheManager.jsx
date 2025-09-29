@@ -14,6 +14,7 @@ export default function CacheManager() {
   const [racers, setRacers] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [selectedDiscipline, setSelectedDiscipline] = useState("both");
   const dropdownRef = useRef(null);
 
   // Generate years for dropdown (current year and 9 previous years)
@@ -114,7 +115,9 @@ export default function CacheManager() {
 
   // Build cache for selected year
   const buildCache = async () => {
-    if (!confirm(`Are you sure you want to build cache for all racers for ${selectedYear}? This may take some time.`)) {
+    const disciplineText = selectedDiscipline === 'both' ? 'both disciplines' : 
+                          selectedDiscipline === 'road-track' ? 'road & track only' : 'cyclocross only';
+    if (!confirm(`Are you sure you want to build cache for all racers for ${selectedYear} (${disciplineText})? This may take some time.`)) {
       return;
     }
     
@@ -136,7 +139,7 @@ export default function CacheManager() {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ year: selectedYear })
+        body: JSON.stringify({ year: selectedYear, discipline: selectedDiscipline })
       });
       
       if (!response.ok) {
@@ -144,9 +147,11 @@ export default function CacheManager() {
       }
       
       const result = await response.json();
+      const disciplineText = selectedDiscipline === 'both' ? 'both disciplines' : 
+                            selectedDiscipline === 'road-track' ? 'road & track' : 'cyclocross';
       setMessage({ 
         type: "success", 
-        text: `Successfully cached data for ${result.cached} racers (${result.failed} failed)` 
+        text: `Successfully cached ${disciplineText} data for ${result.cached} racers (${result.failed} failed)` 
       });
       
       // Refresh cache data
@@ -186,7 +191,8 @@ export default function CacheManager() {
         },
         body: JSON.stringify({ 
           year: selectedYear,
-          racerId: selectedRacer
+          racerId: selectedRacer,
+          discipline: selectedDiscipline
         })
       });
       
@@ -195,9 +201,11 @@ export default function CacheManager() {
       }
       
       const result = await response.json();
+      const disciplineText = selectedDiscipline === 'both' ? 'both disciplines' : 
+                            selectedDiscipline === 'road-track' ? 'road & track' : 'cyclocross';
       setMessage({ 
         type: "success", 
-        text: `Successfully cached data for racer ${selectedRacer}` 
+        text: `Successfully cached ${disciplineText} data for racer ${selectedRacer}` 
       });
       
       // Refresh cache data
@@ -260,6 +268,19 @@ export default function CacheManager() {
               {years.map(year => (
                 <option key={year} value={year}>{year}</option>
               ))}
+            </select>
+          </div>
+
+          <div className="flex items-center">
+            <label className={`text-sm mr-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Discipline:</label>
+            <select
+              value={selectedDiscipline}
+              onChange={(e) => setSelectedDiscipline(e.target.value)}
+              className={`border rounded px-2 py-1.5 text-sm ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white border-gray-300'}`}
+            >
+              <option value="both">Both (Road/Track + Cyclocross)</option>
+              <option value="road-track">Road & Track Only</option>
+              <option value="cyclocross">Cyclocross Only</option>
             </select>
           </div>
           
