@@ -143,8 +143,9 @@ function saveDebugResponse(url, response, person_id, discipline, requestType = '
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const disciplinePrefix = discipline === 'both' ? 'all' : discipline;
-    const filename = `bc_response_${disciplinePrefix}_${requestType}_${person_id}_${timestamp}.json`;
-    const filepath = path.join(debugDir, filename);
+    const baseFilename = `bc_response_${disciplinePrefix}_${requestType}_${person_id}_${timestamp}`;
+    const jsonFilepath = path.join(debugDir, `${baseFilename}.json`);
+    const htmlFilepath = path.join(debugDir, `${baseFilename}.html`);
 
     const debugData = {
       timestamp: new Date().toISOString(),
@@ -160,8 +161,15 @@ function saveDebugResponse(url, response, person_id, discipline, requestType = '
       full_data: response.data
     };
 
-    fs.writeFileSync(filepath, JSON.stringify(debugData, null, 2), 'utf8');
-    console.log(`[${person_id}] DEBUG_SAVED: ${filepath}`);
+    // Save JSON debug file
+    fs.writeFileSync(jsonFilepath, JSON.stringify(debugData, null, 2), 'utf8');
+    console.log(`[${person_id}] DEBUG_SAVED: ${jsonFilepath}`);
+
+    // Save HTML file separately
+    if (response.data) {
+      fs.writeFileSync(htmlFilepath, response.data, 'utf8');
+      console.log(`[${person_id}] DEBUG_HTML_SAVED: ${htmlFilepath}`);
+    }
   } catch (err) {
     console.error(`[${person_id}] DEBUG_SAVE_ERROR: ${err.message}`);
   }
