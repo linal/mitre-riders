@@ -10,8 +10,6 @@ export default function FilterControls({
   setFilterText,
   sortKey,
   setSortKey,
-  raceTypeFilter,
-  setRaceTypeFilter,
   categoryFilter,
   setCategoryFilter,
   handleClearFilters
@@ -87,29 +85,14 @@ export default function FilterControls({
             <option value="name">Name</option>
             <option value="races">Race Count</option>
             <option value="roadAndTrackRaceCount">Road & Track Race Count</option>
-            <option value="cyclocrossRaceCount">Cyclocross Race Count</option>
             <option value="roadAndTrack">Road & Track Pts</option>
             <option value="roadRegional">Road Regional Pts</option>
             <option value="roadNational">Road National Pts</option>
-            <option value="cyclocross">Cyclocross Pts</option>
-            <option value="cxRegional">CX Regional Pts</option>
-            <option value="cxNational">CX National Pts</option>
             <option value="category">Category</option>
           </select>
         </div>
         
-        <div className="flex items-center">
-          <label className={`text-sm mr-2 w-12 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Type:</label>
-          <select
-            value={raceTypeFilter}
-            onChange={(e) => setRaceTypeFilter(e.target.value)}
-            className={`border rounded px-2 py-1.5 text-sm w-full ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white border-gray-300'}`}
-          >
-            <option value="all">All Types</option>
-            <option value="roadAndTrack">Road & Track</option>
-            <option value="cyclocross">Cyclocross</option>
-          </select>
-        </div>
+        
         
         <div className="flex items-center">
           <label className={`text-sm mr-2 w-12 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Cat:</label>

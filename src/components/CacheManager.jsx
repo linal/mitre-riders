@@ -14,7 +14,7 @@ export default function CacheManager() {
   const [racers, setRacers] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [selectedDiscipline, setSelectedDiscipline] = useState("both");
+  const [selectedDiscipline, setSelectedDiscipline] = useState("road-track");
   const dropdownRef = useRef(null);
 
   // Generate years for dropdown (current year and 9 previous years)
@@ -115,8 +115,7 @@ export default function CacheManager() {
 
   // Build cache for selected year
   const buildCache = async () => {
-    const disciplineText = selectedDiscipline === 'both' ? 'both disciplines' : 
-                          selectedDiscipline === 'road-track' ? 'road & track only' : 'cyclocross only';
+    const disciplineText = 'road & track only';
     if (!confirm(`Are you sure you want to build cache for all racers for ${selectedYear} (${disciplineText})? This may take some time.`)) {
       return;
     }
@@ -147,8 +146,7 @@ export default function CacheManager() {
       }
       
       const result = await response.json();
-      const disciplineText = selectedDiscipline === 'both' ? 'both disciplines' : 
-                            selectedDiscipline === 'road-track' ? 'road & track' : 'cyclocross';
+      const disciplineText = 'road & track';
       setMessage({ 
         type: "success", 
         text: `Successfully cached ${disciplineText} data for ${result.cached} racers (${result.failed} failed)` 
@@ -201,8 +199,7 @@ export default function CacheManager() {
       }
       
       const result = await response.json();
-      const disciplineText = selectedDiscipline === 'both' ? 'both disciplines' : 
-                            selectedDiscipline === 'road-track' ? 'road & track' : 'cyclocross';
+      const disciplineText = 'road & track';
       setMessage({ 
         type: "success", 
         text: `Successfully cached ${disciplineText} data for racer ${selectedRacer}` 
@@ -278,9 +275,7 @@ export default function CacheManager() {
               onChange={(e) => setSelectedDiscipline(e.target.value)}
               className={`border rounded px-2 py-1.5 text-sm ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white border-gray-300'}`}
             >
-              <option value="both">Both (Road/Track + Cyclocross)</option>
               <option value="road-track">Road & Track Only</option>
-              <option value="cyclocross">Cyclocross Only</option>
             </select>
           </div>
           

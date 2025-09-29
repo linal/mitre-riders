@@ -113,67 +113,8 @@ function processRegularPoints(html) {
 
 // Helper function to process cyclocross points from HTML
 function processCyclocrossPoints(html) {
-  console.log('PROCESS_CX: Starting cyclocross HTML processing');
-  let raceCount = 0;
-  let totalPoints = 0;
-  let regionalPoints = 0;
-  let nationalPoints = 0;
-
-  const tbodyStart = html.indexOf("<tbody>");
-  const tbodyEnd = html.indexOf("</tbody>");
-  console.log(`PROCESS_CX: tbody found=${tbodyStart !== -1 && tbodyEnd !== -1}, start=${tbodyStart}, end=${tbodyEnd}`);
-
-  if (tbodyStart !== -1 && tbodyEnd !== -1) {
-    const tbody = html.slice(tbodyStart, tbodyEnd);
-    const eventIdMatches = [...tbody.matchAll(/\/events\/details\/(\d+)\//g)];
-    const uniqueEventIds = new Set(eventIdMatches.map(match => match[1]));
-    raceCount = uniqueEventIds.size;
-    console.log(`PROCESS_CX: Found ${eventIdMatches.length} event matches, ${raceCount} unique races`);
-
-    const rows = tbody.split("<tr>");
-    console.log(`PROCESS_CX: Processing ${rows.length - 1} table rows`);
-    for (let i = 1; i < rows.length; i++) {
-      const row = rows[i];
-      const cells = row.split("<td>");
-
-      if (cells.length >= 6) {
-        const categoryCell = cells[2];
-        const pointsCell = cells[5];
-        const pointsEndIndex = pointsCell.indexOf("</td>");
-        if (pointsEndIndex !== -1) {
-          const pointsValue = pointsCell.substring(0, pointsEndIndex).trim();
-          const points = isNaN(Number(pointsValue)) ? 0 : Number(pointsValue);
-
-          if (categoryCell.includes("National")) {
-            nationalPoints += points;
-          } else {
-            regionalPoints += points;
-          }
-        }
-      }
-    }
-  }
-
-  const tfootStart = html.indexOf("<tfoot>");
-  console.log(`PROCESS_CX: tfoot found=${tfootStart !== -1}`);
-  if (tfootStart !== -1) {
-    const tfootSection = html.slice(tfootStart, tfootStart + 500);
-    console.log(`PROCESS_CX: tfoot preview=${tfootSection.replace(/\n/g, ' ').replace(/\s+/g, ' ')}`);
-    let pos = html.indexOf("<td>", tfootStart);
-    for (let i = 0; i < 4 && pos !== -1; i++) {
-      pos = html.indexOf("<td>", pos + 1);
-    }
-    if (pos !== -1) {
-      const start = pos + 4;
-      const end = html.indexOf("</td>", start);
-      const value = html.slice(start, end).trim();
-      totalPoints = isNaN(Number(value)) ? 0 : Number(value);
-      console.log(`PROCESS_CX: Total points extracted='${value}', parsed=${totalPoints}`);
-    }
-  }
-
-  console.log(`PROCESS_CX: Final results - races=${raceCount}, total=${totalPoints}, regional=${regionalPoints}, national=${nationalPoints}`);
-  return { raceCount, totalPoints, regionalPoints, nationalPoints };
+  // Cyclocross disabled
+  return { raceCount: 0, totalPoints: 0, regionalPoints: 0, nationalPoints: 0 };
 }
 
 // Main service function to fetch and process racer data
@@ -420,102 +361,13 @@ async function fetchRacerData(person_id, year, clubsFile, discipline = 'both') {
 
     console.log(`[${person_id}] EXTRACTED_DATA: Name='${name}', Club='${club}', Category='${category}'`);
     
-    // Fetch cyclocross points
+    // Cyclocross fetching disabled
     let cyclocrossData = { raceCount: 0, totalPoints: 0, regionalPoints: 0, nationalPoints: 0 };
-    try {
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      const cyclocrossUrl = `https://www.britishcycling.org.uk/points?d=6&person_id=${person_id}&year=${year}`;
-      console.log(`[${person_id}] PUPPETEER_CX_GOTO_START: Fetching cyclocross points: ${cyclocrossUrl}`);
-      const cxGotoStart = Date.now();
-      
-      try {
-        await Promise.race([
-          page.goto(cyclocrossUrl, { waitUntil: 'networkidle2', timeout: 120000 }),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('CX page goto timeout after 120s')), 120000)
-          )
-        ]);
-      } catch (err) {
-        const cxGotoDuration = Date.now() - cxGotoStart;
-        console.log(`[${person_id}] PUPPETEER_CX_GOTO_FAILED: duration=${cxGotoDuration}ms, error="${err.message}"`);
-        throw err;
-      }
-      
-      const cxGotoDuration = Date.now() - cxGotoStart;
-      console.log(`[${person_id}] PUPPETEER_CX_GOTO_SUCCESS: cyclocross page loaded in ${cxGotoDuration}ms`);
-      
-      console.log(`[${person_id}] PUPPETEER_CX_WAIT: Starting 5s wait`);
-      await new Promise(resolve => setTimeout(resolve, 5000));
-      console.log(`[${person_id}] PUPPETEER_CX_WAIT: 5s wait completed`);
-
-        let cyclocrossHtml = await page.content();
-        console.log(`[${person_id}] Cyclocross HTML length: ${cyclocrossHtml.length}`);
-        
-        // Save debug page content if running locally
-        if (process.env.NODE_ENV !== 'production') {
-          saveDebugPageContent(cyclocrossUrl, cyclocrossHtml, person_id, discipline, 'cyclocross');
-        }
-        
-        // Log cyclocross page structure
-        const cxTitleMatch = cyclocrossHtml.match(/<title[^>]*>([^<]*)<\/title>/i);
-        console.log(`[${person_id}] CX_PAGE_TITLE: ${cxTitleMatch ? cxTitleMatch[1] : 'Not found'}`);
-        
-        const cxTableMatch = cyclocrossHtml.match(/<table[^>]*>.*?<\/table>/s);
-        console.log(`[${person_id}] CX_TABLE_FOUND: ${!!cxTableMatch}`);
-        if (cxTableMatch) {
-          const tablePreview = cxTableMatch[0].substring(0, 500).replace(/\n/g, ' ').replace(/\s+/g, ' ');
-          console.log(`[${person_id}] CX_TABLE_PREVIEW: ${tablePreview}`);
-        }
-        
-        if (cyclocrossHtml.includes('Just a moment') || cyclocrossHtml.includes('cloudflare')) {
-        console.log(`[${person_id}] CX_CLOUDFLARE_DETECTED: Challenge page detected`);
-        await new Promise(resolve => setTimeout(resolve, 20000));
-        cyclocrossHtml = await page.content();
-        console.log(`[${person_id}] After wait, cyclocross HTML length: ${cyclocrossHtml.length}`);
-        if (cyclocrossHtml.includes('Just a moment') || cyclocrossHtml.includes('cloudflare')) {
-          console.log(`[${person_id}] CX_CLOUDFLARE_PERSISTENT: Skipping cyclocross data`);
-        } else {
-          console.log(`[${person_id}] CX_CLOUDFLARE_RESOLVED: Processing cyclocross data`);
-          cyclocrossData = processCyclocrossPoints(cyclocrossHtml);
-          
-          // Try to get club from cyclocross if not found
-          if (!club) {
-            const cxClubRegex = year === currentYear 
-              ? /<dd>Current Club: <a[^>]*href="\/clubpoints\/\?club_id=(\d+)[^"]*">([^<]+)<\/a>/
-              : /<dd>Year End Club: <a[^>]*href="\/clubpoints\/\?club_id=(\d+)[^"]*">([^<]+)<\/a>/;
-            
-            const cxClubMatch = cyclocrossHtml.match(cxClubRegex);
-            if (cxClubMatch?.[2]) {
-              club = cxClubMatch[2].trim();
-              clubId = cxClubMatch[1];
-            }
-          }
-        }
-      } else {
-        console.log(`[${person_id}] CX_NO_CLOUDFLARE: Processing cyclocross data`);
-        cyclocrossData = processCyclocrossPoints(cyclocrossHtml);
-        
-        // Try to get club from cyclocross if not found
-        if (!club) {
-          const cxClubRegex = year === currentYear 
-            ? /<dd>Current Club: <a[^>]*href="\/clubpoints\/\?club_id=(\d+)[^"]*">([^<]+)<\/a>/
-            : /<dd>Year End Club: <a[^>]*href="\/clubpoints\/\?club_id=(\d+)[^"]*">([^<]+)<\/a>/;
-          
-          const cxClubMatch = cyclocrossHtml.match(cxClubRegex);
-          if (cxClubMatch?.[2]) {
-            club = cxClubMatch[2].trim();
-            clubId = cxClubMatch[1];
-          }
-        }
-      }
-    } catch (err) {
-      console.log(`[${person_id}] Failed to fetch cyclocross data: ${err.message}`);
-    }
 
     // Process points data
     const regularData = processRegularPoints(regularHtml);
     console.log(`[${person_id}] Regular data: ${JSON.stringify(regularData)}`);
-    console.log(`[${person_id}] Cyclocross data: ${JSON.stringify(cyclocrossData)}`);
+    // Cyclocross data removed
 
     // Update clubs cache
     if (club && clubId && clubsFile) {
@@ -539,9 +391,9 @@ async function fetchRacerData(person_id, year, clubsFile, discipline = 'both') {
       raceCount: regularData.raceCount + cyclocrossData.raceCount,
       points: regularData.totalPoints + cyclocrossData.totalPoints,
       roadAndTrackPoints: regularData.totalPoints,
-      cyclocrossPoints: cyclocrossData.totalPoints,
+      cyclocrossPoints: 0,
       roadAndTrackRaceCount: regularData.raceCount,
-      cyclocrossRaceCount: cyclocrossData.raceCount,
+      cyclocrossRaceCount: 0,
       category,
       name,
       club,
@@ -550,8 +402,8 @@ async function fetchRacerData(person_id, year, clubsFile, discipline = 'both') {
       nationalPoints: regularData.nationalPoints + cyclocrossData.nationalPoints,
       roadRegionalPoints: regularData.regionalPoints,
       roadNationalPoints: regularData.nationalPoints,
-      cxRegionalPoints: cyclocrossData.regionalPoints,
-      cxNationalPoints: cyclocrossData.nationalPoints
+      cxRegionalPoints: 0,
+      cxNationalPoints: 0
     };
     
     const duration = Date.now() - startTime;

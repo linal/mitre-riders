@@ -14,7 +14,7 @@ export default function ClubRiders() {
   const [loading, setLoading] = useState(true);
   const [sortKey, setSortKey] = useState(searchParams.get("sort") || "name");
   const [filterText, setFilterText] = useState(searchParams.get("filter") || "");
-  const [raceTypeFilter, setRaceTypeFilter] = useState(searchParams.get("raceType") || "all");
+  // Type filter removed (only Road & Track)
   const [categoryFilter, setCategoryFilter] = useState(searchParams.get("category") || "");
   const [uniqueClubs, setUniqueClubs] = useState([]);
 
@@ -43,7 +43,6 @@ export default function ClubRiders() {
   const handleClearFilters = () => {
     setFilterText("");
     setCategoryFilter("");
-    setRaceTypeFilter("all");
     setSortKey("name");
     
     // Update URL params
@@ -60,10 +59,10 @@ export default function ClubRiders() {
     if (year !== "2025") params.set("year", year);
     if (sortKey !== "name") params.set("sort", sortKey);
     if (filterText) params.set("filter", filterText);
-    if (raceTypeFilter !== "all") params.set("raceType", raceTypeFilter);
+    // raceTypeFilter removed
     if (categoryFilter) params.set("category", categoryFilter);
     setSearchParams(params);
-  }, [year, sortKey, filterText, raceTypeFilter, categoryFilter, setSearchParams]);
+  }, [year, sortKey, filterText, categoryFilter, setSearchParams]);
   
   // Fetch data when year or clubName changes
   useEffect(() => {
@@ -85,13 +84,7 @@ export default function ClubRiders() {
       if (categoryFilter === "4th") return racer.category && racer.category.includes("4th");
       return racer.category === categoryFilter;
     })
-    .filter(([_, racer]) => {
-      // Filter out riders with zero races
-      if (raceTypeFilter === "all") return racer.raceCount > 0;
-      if (raceTypeFilter === "roadAndTrack") return racer.roadAndTrackRaceCount > 0;
-      if (raceTypeFilter === "cyclocross") return racer.cyclocrossRaceCount > 0;
-      return false;
-    })
+    .filter(([_, racer]) => racer.raceCount > 0)
     .sort((a, b) => {
       const [_, aData] = a;
       const [__, bData] = b;
@@ -99,30 +92,15 @@ export default function ClubRiders() {
       if (sortKey === "name") {
         return aData.name.localeCompare(bData.name);
       } else if (sortKey === "races") {
-        // Consider race type filter when sorting by race count
-        if (raceTypeFilter === "roadAndTrack") {
-          return (bData.roadAndTrackRaceCount || 0) - (aData.roadAndTrackRaceCount || 0);
-        } else if (raceTypeFilter === "cyclocross") {
-          return (bData.cyclocrossRaceCount || 0) - (aData.cyclocrossRaceCount || 0);
-        } else {
-          return (bData.raceCount || 0) - (aData.raceCount || 0);
-        }
+        return (bData.raceCount || 0) - (aData.raceCount || 0);
       } else if (sortKey === "roadAndTrackRaceCount") {
         return (bData.roadAndTrackRaceCount || 0) - (aData.roadAndTrackRaceCount || 0);
-      } else if (sortKey === "cyclocrossRaceCount") {
-        return (bData.cyclocrossRaceCount || 0) - (aData.cyclocrossRaceCount || 0);
       } else if (sortKey === "roadAndTrack") {
         return (bData.roadAndTrackPoints || 0) - (aData.roadAndTrackPoints || 0);
       } else if (sortKey === "roadRegional") {
         return (bData.roadRegionalPoints || 0) - (aData.roadRegionalPoints || 0);
       } else if (sortKey === "roadNational") {
         return (bData.roadNationalPoints || 0) - (aData.roadNationalPoints || 0);
-      } else if (sortKey === "cyclocross") {
-        return (bData.cyclocrossPoints || 0) - (aData.cyclocrossPoints || 0);
-      } else if (sortKey === "cxRegional") {
-        return (bData.cxRegionalPoints || 0) - (aData.cxRegionalPoints || 0);
-      } else if (sortKey === "cxNational") {
-        return (bData.cxNationalPoints || 0) - (aData.cxNationalPoints || 0);
       } else if (sortKey === "category") {
         // If one rider has a category and the other doesn't, the one with category comes first
         if (aData.category && !bData.category) return -1;
@@ -190,8 +168,6 @@ export default function ClubRiders() {
         setSortKey={setSortKey}
         clubFilter={null} // Not used anymore
         setClubFilter={null} // Not used anymore
-        raceTypeFilter={raceTypeFilter}
-        setRaceTypeFilter={setRaceTypeFilter}
         categoryFilter={categoryFilter}
         setCategoryFilter={setCategoryFilter}
         uniqueClubs={[]} // Not used anymore
@@ -201,66 +177,34 @@ export default function ClubRiders() {
       {/* Summary section with totals */}
       <div className={`p-4 rounded-lg mb-4 ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
         <h3 className={`text-sm font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-700'}`}>Summary Totals</h3>
-        <div className="grid gap-3 mb-3" style={{ 
-          gridTemplateColumns: `repeat(${raceTypeFilter === "all" ? 3 : 2}, 1fr)`
-        }}>
+        <div className="grid gap-3 mb-3" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
           <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-white'} shadow-sm`}>
             <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Total Active Riders</div>
             <div className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-              {sortedFilteredRacers.filter(([_, racer]) => 
-                raceTypeFilter === "all" ? racer.raceCount > 0 
-                : raceTypeFilter === "roadAndTrack" ? racer.roadAndTrackRaceCount > 0
-                : racer.cyclocrossRaceCount > 0
-              ).length}
+              {sortedFilteredRacers.filter(([_, racer]) => racer.raceCount > 0).length}
             </div>
           </div>
-          {(raceTypeFilter === "all" || raceTypeFilter === "roadAndTrack") && (
-            <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-white'} shadow-sm`}>
-              <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Total Road & Track Points</div>
-              <div className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                {sortedFilteredRacers.reduce((sum, [_, racer]) => sum + (racer.roadAndTrackPoints || 0), 0)}
-              </div>
+          <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-white'} shadow-sm`}>
+            <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Total Road & Track Points</div>
+            <div className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+              {sortedFilteredRacers.reduce((sum, [_, racer]) => sum + (racer.roadAndTrackPoints || 0), 0)}
             </div>
-          )}
-          {(raceTypeFilter === "all" || raceTypeFilter === "cyclocross") && (
-            <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-white'} shadow-sm`}>
-              <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Total Cyclocross Points</div>
-              <div className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                {sortedFilteredRacers.reduce((sum, [_, racer]) => sum + (racer.cyclocrossPoints || 0), 0)}
-              </div>
-            </div>
-          )}
+          </div>
+          
         </div>
-        <div className="grid gap-3" style={{ 
-          gridTemplateColumns: `repeat(${raceTypeFilter === "all" ? 3 : 2}, 1fr)`
-        }}>
+        <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
           <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-white'} shadow-sm`}>
             <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Total Races</div>
             <div className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-              {raceTypeFilter === "all" 
-                ? sortedFilteredRacers.reduce((sum, [_, racer]) => sum + (racer.raceCount || 0), 0)
-                : raceTypeFilter === "roadAndTrack"
-                  ? sortedFilteredRacers.reduce((sum, [_, racer]) => sum + (racer.roadAndTrackRaceCount || 0), 0)
-                  : sortedFilteredRacers.reduce((sum, [_, racer]) => sum + (racer.cyclocrossRaceCount || 0), 0)
-              }
+              {sortedFilteredRacers.reduce((sum, [_, racer]) => sum + (racer.raceCount || 0), 0)}
             </div>
           </div>
-          {(raceTypeFilter === "all" || raceTypeFilter === "roadAndTrack") && (
-            <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-white'} shadow-sm`}>
-              <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Road & Track Races</div>
-              <div className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                {sortedFilteredRacers.reduce((sum, [_, racer]) => sum + (racer.roadAndTrackRaceCount || 0), 0)}
-              </div>
+          <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-white'} shadow-sm`}>
+            <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Road & Track Races</div>
+            <div className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+              {sortedFilteredRacers.reduce((sum, [_, racer]) => sum + (racer.roadAndTrackRaceCount || 0), 0)}
             </div>
-          )}
-          {(raceTypeFilter === "all" || raceTypeFilter === "cyclocross") && (
-            <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-white'} shadow-sm`}>
-              <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Cyclocross Races</div>
-              <div className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                {sortedFilteredRacers.reduce((sum, [_, racer]) => sum + (racer.cyclocrossRaceCount || 0), 0)}
-              </div>
-            </div>
-          )}
+          </div>
         </div>
       </div>
 
@@ -271,7 +215,6 @@ export default function ClubRiders() {
             racerId={racerId} 
             racer={racer} 
             year={year} 
-            raceTypeFilter={raceTypeFilter} 
           />
         ))}
       </div>

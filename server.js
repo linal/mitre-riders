@@ -121,12 +121,12 @@ loadRacers();
 
 // Original endpoint for single racer data
 app.get('/api/race-data', async (req, res) => {
-  const { person_id, year, discipline = 'both' } = req.query;
+  const { person_id, year } = req.query;
   if (!person_id || !year) {
     return res.status(400).send("Missing parameters");
   }
 
-  const cacheKey = `${person_id}_${year}_${discipline}`;
+  const cacheKey = `${person_id}_${year}_road-track`;
   const cacheFilePath = path.join(CACHE_DIR, `${cacheKey}.json`);
   const now = Date.now();
   const cacheDurationMinutes = CACHE_TTL_MS / (60 * 1000);
@@ -164,7 +164,7 @@ app.get('/api/race-data', async (req, res) => {
   console.log(`Cache MISS for ${cacheKey}. Cache duration: ${cacheDurationMinutes} minutes`);
 
   try {
-    const result = await fetchRacerDataWrapper(person_id, year, discipline);
+    const result = await fetchRacerDataWrapper(person_id, year, 'road-track');
     const cacheEntry = { data: result, timestamp: now };
 
     // Update memory cache
@@ -284,7 +284,7 @@ app.delete('/api/racers/:bc', verifyToken, (req, res) => {
 
 // New endpoint to build cache for all racers - PROTECTED
 app.post('/api/build-cache', verifyToken, async (req, res) => {
-  const { year, racerId, discipline = 'both' } = req.body || req.query;
+  const { year, racerId } = req.body || req.query;
 
   if (!year) {
     return res.status(400).send("Missing year parameter");
@@ -312,12 +312,12 @@ app.post('/api/build-cache', verifyToken, async (req, res) => {
         });
       }
 
-      const cacheKey = `${racerId}_${year}_${discipline}`;
+      const cacheKey = `${racerId}_${year}_road-track`;
       const cacheFilePath = path.join(CACHE_DIR, `${cacheKey}.json`);
 
       try {
         // Fetch data from BC API
-        const result = await fetchRacerDataWrapper(racerId, year, discipline);
+        const result = await fetchRacerDataWrapper(racerId, year, 'road-track');
         const cacheEntry = { data: result, timestamp: now };
 
         // Update memory cache
@@ -356,12 +356,12 @@ app.post('/api/build-cache', verifyToken, async (req, res) => {
       // Process each racer and build cache
       for (const racer of racers) {
         const racerId = racer.bc;
-        const cacheKey = `${racerId}_${year}_${discipline}`;
+        const cacheKey = `${racerId}_${year}_road-track`;
         const cacheFilePath = path.join(CACHE_DIR, `${cacheKey}.json`);
 
         try {
           // Fetch data from BC API
-          const result = await fetchRacerDataWrapper(racerId, year, discipline);
+          const result = await fetchRacerDataWrapper(racerId, year, 'road-track');
           const cacheEntry = { data: result, timestamp: now };
 
           // Update memory cache
@@ -408,7 +408,7 @@ app.post('/api/build-cache', verifyToken, async (req, res) => {
 
 // Updated endpoint to get all race data (only from cache)
 app.get('/api/all-race-data', async (req, res) => {
-  const { year, discipline = 'both' } = req.query;
+  const { year } = req.query;
 
   if (!year) {
     return res.status(400).send("Missing year parameter");
@@ -422,8 +422,8 @@ app.get('/api/all-race-data', async (req, res) => {
     for (const racer of racers) {
       const racerId = racer.bc;
       
-      // Try the requested discipline first (usually 'both')
-      let cacheKey = `${racerId}_${year}_${discipline}`;
+      // Use road-track cache only
+      let cacheKey = `${racerId}_${year}_road-track`;
       let cacheFilePath = path.join(CACHE_DIR, `${cacheKey}.json`);
       
       // Check if requested discipline cache exists, if not try other disciplines
@@ -439,29 +439,7 @@ app.get('/api/all-race-data', async (req, res) => {
         }
       }
       
-      // If no cache found for requested discipline, try other disciplines
-      if (!cacheEntry) {
-        const alternativeDisciplines = discipline === 'both' ? ['road-track', 'cyclocross'] : ['both'];
-        for (const altDiscipline of alternativeDisciplines) {
-          const altCacheKey = `${racerId}_${year}_${altDiscipline}`;
-          const altCacheFilePath = path.join(CACHE_DIR, `${altCacheKey}.json`);
-          
-          if (cache[altCacheKey]) {
-            cacheEntry = cache[altCacheKey];
-            cacheKey = altCacheKey; // Update for memory cache storage
-            break;
-          } else if (fs.existsSync(altCacheFilePath)) {
-            try {
-              const fileContent = fs.readFileSync(altCacheFilePath, 'utf8');
-              cacheEntry = JSON.parse(fileContent);
-              cacheKey = altCacheKey; // Update for memory cache storage
-              break;
-            } catch (err) {
-              console.error(`Error reading cache file ${altCacheFilePath}:`, err.message);
-            }
-          }
-        }
-      }
+      // No alternative disciplines; only road-track supported
 
       // Process cache entry if found
       if (cacheEntry) {
@@ -475,7 +453,7 @@ app.get('/api/all-race-data', async (req, res) => {
         };
       } else {
         // No cache available for any discipline
-        console.log(`No cache available for ${racerId}_${year} (tried ${discipline} and alternatives)`);
+        console.log(`No cache available for ${racerId}_${year} (road-track only)`);
         missingData.push(racerId);
         
         // Add empty result for racers with no cache

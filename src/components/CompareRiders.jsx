@@ -230,12 +230,10 @@ export default function CompareRiders() {
             <StatRow label="Total Races" aValue={riderAData.raceCount} bValue={riderBData.raceCount} />
             <StatRow label="Road & Track Points" aValue={riderAData.roadAndTrackPoints} bValue={riderBData.roadAndTrackPoints} />
             <StatRow label="Road & Track Races" aValue={riderAData.roadAndTrackRaceCount} bValue={riderBData.roadAndTrackRaceCount} />
-            <StatRow label="Cyclocross Points" aValue={riderAData.cyclocrossPoints} bValue={riderBData.cyclocrossPoints} />
-            <StatRow label="Cyclocross Races" aValue={riderAData.cyclocrossRaceCount} bValue={riderBData.cyclocrossRaceCount} />
+            
             <StatRow label="Road Regional Points" aValue={riderAData.roadRegionalPoints} bValue={riderBData.roadRegionalPoints} />
             <StatRow label="Road National Points" aValue={riderAData.roadNationalPoints} bValue={riderBData.roadNationalPoints} />
-            <StatRow label="CX Regional Points" aValue={riderAData.cxRegionalPoints} bValue={riderBData.cxRegionalPoints} />
-            <StatRow label="CX National Points" aValue={riderAData.cxNationalPoints} bValue={riderBData.cxNationalPoints} />
+            
           </div>
         </div>
       )}

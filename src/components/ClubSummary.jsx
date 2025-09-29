@@ -22,13 +22,7 @@ export default function ClubSummary() {
       regionalPoints: 0,
       nationalPoints: 0
     },
-    cyclocross: {
-      riders: 0,
-      races: 0,
-      points: 0,
-      regionalPoints: 0,
-      nationalPoints: 0
-    },
+    cyclocross: { riders: 0, races: 0, points: 0, regionalPoints: 0, nationalPoints: 0 },
     categories: {},
     clubs: {}
   });
@@ -42,13 +36,7 @@ export default function ClubSummary() {
       regionalPoints: 0,
       nationalPoints: 0
     },
-    cyclocross: {
-      riders: 0,
-      races: 0,
-      points: 0,
-      regionalPoints: 0,
-      nationalPoints: 0
-    },
+    cyclocross: { riders: 0, races: 0, points: 0, regionalPoints: 0, nationalPoints: 0 },
     categories: {},
     clubs: {}
   });
@@ -125,14 +113,7 @@ export default function ClubSummary() {
         summary.roadAndTrack.nationalPoints += rider.roadNationalPoints || 0;
       }
 
-      // Cyclocross stats
-      if (rider.cyclocrossRaceCount > 0) {
-        summary.cyclocross.riders++;
-        summary.cyclocross.races += rider.cyclocrossRaceCount || 0;
-        summary.cyclocross.points += rider.cyclocrossPoints || 0;
-        summary.cyclocross.regionalPoints += rider.cxRegionalPoints || 0;
-        summary.cyclocross.nationalPoints += rider.cxNationalPoints || 0;
-      }
+      // Cyclocross removed from UI; keep placeholder fields but do not update
 
       // Categories
       const category = rider.category || 'Unlicensed';
@@ -275,7 +256,7 @@ export default function ClubSummary() {
           </div>
         </div>
 
-        {/* Overall summary */}
+        {/* Overall summary - 4 card grid */}
         <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
           <div className="flex justify-between items-center mb-3">
             <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-800'}`}>Overall Summary</h3>
@@ -285,7 +266,7 @@ export default function ClubSummary() {
               </div>
             )}
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-white'} shadow-sm`}>
               <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Active Riders</div>
               <div className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
@@ -304,6 +285,28 @@ export default function ClubSummary() {
                 {showComparison && (
                   <span className="ml-2 text-sm">
                     {formatChange(calculateChange(summary.totalRaces, prevYearSummary.totalRaces), summary.totalRaces, prevYearSummary.totalRaces)}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-white'} shadow-sm`}>
+              <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Road & Track Points</div>
+              <div className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                {summary.roadAndTrack.points}
+                {showComparison && (
+                  <span className="ml-2 text-sm">
+                    {formatChange(calculateChange(summary.roadAndTrack.points, prevYearSummary.roadAndTrack.points), summary.roadAndTrack.points, prevYearSummary.roadAndTrack.points)}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-white'} shadow-sm`}>
+              <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Road & Track Races</div>
+              <div className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                {summary.roadAndTrack.races}
+                {showComparison && (
+                  <span className="ml-2 text-sm">
+                    {formatChange(calculateChange(summary.roadAndTrack.races, prevYearSummary.roadAndTrack.races), summary.roadAndTrack.races, prevYearSummary.roadAndTrack.races)}
                   </span>
                 )}
               </div>
@@ -377,72 +380,10 @@ export default function ClubSummary() {
             </div>
           </div>
 
-          {/* Cyclocross */}
-          <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
-            <h3 className={`text-lg font-medium mb-3 ${darkMode ? 'text-white' : 'text-gray-800'}`}>Cyclocross</h3>
-            <div className="space-y-3">
-              <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-white'} shadow-sm`}>
-                <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Active Riders</div>
-                <div className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                  {summary.cyclocross.riders}
-                  {showComparison && (
-                    <span className="ml-2 text-sm">
-                      {formatChange(calculateChange(summary.cyclocross.riders, prevYearSummary.cyclocross.riders), summary.cyclocross.riders, prevYearSummary.cyclocross.riders)}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-white'} shadow-sm`}>
-                <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Total Races</div>
-                <div className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                  {summary.cyclocross.races}
-                  {showComparison && (
-                    <span className="ml-2 text-sm">
-                      {formatChange(calculateChange(summary.cyclocross.races, prevYearSummary.cyclocross.races), summary.cyclocross.races, prevYearSummary.cyclocross.races)}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-white'} shadow-sm`}>
-                <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Total Points</div>
-                <div className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                  {summary.cyclocross.points}
-                  {showComparison && (
-                    <span className="ml-2 text-sm">
-                      {formatChange(calculateChange(summary.cyclocross.points, prevYearSummary.cyclocross.points), summary.cyclocross.points, prevYearSummary.cyclocross.points)}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-white'} shadow-sm`}>
-                  <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Regional Points</div>
-                  <div className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                    {summary.cyclocross.regionalPoints}
-                    {showComparison && (
-                      <span className="ml-2 text-sm">
-                        {formatChange(calculateChange(summary.cyclocross.regionalPoints, prevYearSummary.cyclocross.regionalPoints), summary.cyclocross.regionalPoints, prevYearSummary.cyclocross.regionalPoints)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-white'} shadow-sm`}>
-                  <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>National Points</div>
-                  <div className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                    {summary.cyclocross.nationalPoints}
-                    {showComparison && (
-                      <span className="ml-2 text-sm">
-                        {formatChange(calculateChange(summary.cyclocross.nationalPoints, prevYearSummary.cyclocross.nationalPoints), summary.cyclocross.nationalPoints, prevYearSummary.cyclocross.nationalPoints)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Cyclocross removed from UI */}
         </div>
 
-        {/* Year-over-year comparison summary */}
+        {/* Year-over-year comparison summary (Cyclocross removed) */}
         {showComparison && (
           <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
             <h3 className={`text-lg font-medium mb-3 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
@@ -465,14 +406,27 @@ export default function ClubSummary() {
                   Road & Track points: {summary.roadAndTrack.points} vs {prevYearSummary.roadAndTrack.points} 
                   ({formatChange(calculateChange(summary.roadAndTrack.points, prevYearSummary.roadAndTrack.points), summary.roadAndTrack.points, prevYearSummary.roadAndTrack.points)})
                 </li>
-                <li>
-                  Cyclocross points: {summary.cyclocross.points} vs {prevYearSummary.cyclocross.points} 
-                  ({formatChange(calculateChange(summary.cyclocross.points, prevYearSummary.cyclocross.points), summary.cyclocross.points, prevYearSummary.cyclocross.points)})
-                </li>
               </ul>
             </div>
           </div>
         )}
+
+        {/* Categories summary */}
+        <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+          <h3 className={`text-lg font-medium mb-3 ${darkMode ? 'text-white' : 'text-gray-800'}`}>Categories</h3>
+          <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-white'} shadow-sm`}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {Object.entries(summary.categories).map(([cat, stats]) => (
+                <div key={cat} className={`rounded-md p-3 ${darkMode ? 'bg-gray-800' : 'bg-gray-50'} border ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                  <div className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-800'}`}>{cat}</div>
+                  <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Riders: {stats.count}</div>
+                  <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Races: {stats.races}</div>
+                  <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Points: {stats.points}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     </LoadingOverlay>
   );
