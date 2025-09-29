@@ -126,7 +126,7 @@ app.get('/api/race-data', async (req, res) => {
     return res.status(400).send("Missing parameters");
   }
 
-  const cacheKey = `${person_id}_${year}`;
+  const cacheKey = `${person_id}_${year}_${discipline}`;
   const cacheFilePath = path.join(CACHE_DIR, `${cacheKey}.json`);
   const now = Date.now();
   const cacheDurationMinutes = CACHE_TTL_MS / (60 * 1000);
@@ -312,7 +312,7 @@ app.post('/api/build-cache', verifyToken, async (req, res) => {
         });
       }
 
-      const cacheKey = `${racerId}_${year}`;
+      const cacheKey = `${racerId}_${year}_${discipline}`;
       const cacheFilePath = path.join(CACHE_DIR, `${cacheKey}.json`);
 
       try {
@@ -356,7 +356,7 @@ app.post('/api/build-cache', verifyToken, async (req, res) => {
       // Process each racer and build cache
       for (const racer of racers) {
         const racerId = racer.bc;
-        const cacheKey = `${racerId}_${year}`;
+        const cacheKey = `${racerId}_${year}_${discipline}`;
         const cacheFilePath = path.join(CACHE_DIR, `${cacheKey}.json`);
 
         try {
@@ -408,7 +408,7 @@ app.post('/api/build-cache', verifyToken, async (req, res) => {
 
 // Updated endpoint to get all race data (only from cache)
 app.get('/api/all-race-data', async (req, res) => {
-  const { year } = req.query;
+  const { year, discipline = 'both' } = req.query;
 
   if (!year) {
     return res.status(400).send("Missing year parameter");
@@ -421,53 +421,77 @@ app.get('/api/all-race-data', async (req, res) => {
     // Process each racer, using ONLY cache
     for (const racer of racers) {
       const racerId = racer.bc;
-      const cacheKey = `${racerId}_${year}`;
-      const cacheFilePath = path.join(CACHE_DIR, `${cacheKey}.json`);
-
-      // Check memory cache first
+      
+      // Try the requested discipline first (usually 'both')
+      let cacheKey = `${racerId}_${year}_${discipline}`;
+      let cacheFilePath = path.join(CACHE_DIR, `${cacheKey}.json`);
+      
+      // Check if requested discipline cache exists, if not try other disciplines
+      let cacheEntry = null;
       if (cache[cacheKey]) {
-        console.log(`Memory cache HIT for ${cacheKey}`);
-        results[racerId] = {
-          ...cache[cacheKey].data
-        };
-        continue; // Skip to next racer
-      }
-      // Check disk cache
-      else if (fs.existsSync(cacheFilePath)) {
+        cacheEntry = cache[cacheKey];
+      } else if (fs.existsSync(cacheFilePath)) {
         try {
           const fileContent = fs.readFileSync(cacheFilePath, 'utf8');
-          const cacheEntry = JSON.parse(fileContent);
-
-          console.log(`Disk cache HIT for ${cacheKey}`);
-          // Update memory cache
-          cache[cacheKey] = cacheEntry;
-          results[racerId] = {
-            ...cacheEntry.data
-          };
-          continue; // Skip to next racer
+          cacheEntry = JSON.parse(fileContent);
         } catch (err) {
           console.error(`Error reading cache file ${cacheFilePath}:`, err.message);
-          missingData.push(racerId);
         }
-      } else {
-        // No cache available
-        console.log(`No cache available for ${cacheKey}`);
-        missingData.push(racerId);
+      }
+      
+      // If no cache found for requested discipline, try other disciplines
+      if (!cacheEntry) {
+        const alternativeDisciplines = discipline === 'both' ? ['road-track', 'cyclocross'] : ['both'];
+        for (const altDiscipline of alternativeDisciplines) {
+          const altCacheKey = `${racerId}_${year}_${altDiscipline}`;
+          const altCacheFilePath = path.join(CACHE_DIR, `${altCacheKey}.json`);
+          
+          if (cache[altCacheKey]) {
+            cacheEntry = cache[altCacheKey];
+            cacheKey = altCacheKey; // Update for memory cache storage
+            break;
+          } else if (fs.existsSync(altCacheFilePath)) {
+            try {
+              const fileContent = fs.readFileSync(altCacheFilePath, 'utf8');
+              cacheEntry = JSON.parse(fileContent);
+              cacheKey = altCacheKey; // Update for memory cache storage
+              break;
+            } catch (err) {
+              console.error(`Error reading cache file ${altCacheFilePath}:`, err.message);
+            }
+          }
+        }
       }
 
-      // Add empty result for racers with no cache
-      results[racerId] = {
-        raceCount: 0,
-        points: 0,
-        roadAndTrackPoints: 0,
-        cyclocrossPoints: 0,
-        roadAndTrackRaceCount: 0,
-        cyclocrossRaceCount: 0,
-        category: '',
-        name: racer.name || 'Unknown',
-        club: racer.club || 'Unknown',
-        error: 'No cached data available'
-      };
+      // Process cache entry if found
+      if (cacheEntry) {
+        console.log(`Cache HIT for ${cacheKey}`);
+        // Update memory cache if it was loaded from disk
+        if (!cache[cacheKey]) {
+          cache[cacheKey] = cacheEntry;
+        }
+        results[racerId] = {
+          ...cacheEntry.data
+        };
+      } else {
+        // No cache available for any discipline
+        console.log(`No cache available for ${racerId}_${year} (tried ${discipline} and alternatives)`);
+        missingData.push(racerId);
+        
+        // Add empty result for racers with no cache
+        results[racerId] = {
+          raceCount: 0,
+          points: 0,
+          roadAndTrackPoints: 0,
+          cyclocrossPoints: 0,
+          roadAndTrackRaceCount: 0,
+          cyclocrossRaceCount: 0,
+          category: '',
+          name: racer.name || 'Unknown',
+          club: racer.club || 'Unknown',
+          error: 'No cached data available'
+        };
+      }
     }
 
     res.json(results);
@@ -547,8 +571,8 @@ app.delete('/api/cache/:year', verifyToken, (req, res) => {
         removedCount++;
 
         // Also remove from memory cache if present
-        const racerId = file.split('_')[0];
-        const cacheKey = `${racerId}_${year}`;
+        // Extract cache key from filename (format: racerId_year_discipline.json)
+        const cacheKey = file.replace('.json', '');
         if (cache[cacheKey]) {
           delete cache[cacheKey];
         }
