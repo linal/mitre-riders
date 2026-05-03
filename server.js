@@ -294,6 +294,132 @@ app.delete('/api/racers/:bc', verifyToken, (req, res) => {
   }
 });
 
+// Build (or rebuild) the cache for a single racer. All logging needed to
+// understand *why* the cache did or didn't get built lives here, so the same
+// trace works whether we're rebuilding one rider or the whole roster.
+async function buildCacheForRacer(racer, year, opts) {
+  const { now, index, total } = opts;
+  const racerId = racer.bc;
+  const cacheKey = `${racerId}_${year}_road-track`;
+  const cacheFilePath = path.join(CACHE_DIR, `${cacheKey}.json`);
+
+  const attemptLog = log.child({
+    op: 'build_cache',
+    racer_id: racerId,
+    racer_known_name: racer.name || null,
+    year,
+    cache_key: cacheKey,
+    cache_path: cacheFilePath,
+    attempt_index: index,
+    attempt_total: total,
+  });
+
+  const attemptStart = Date.now();
+  attemptLog.info('cache_build_attempt');
+
+  let result;
+  try {
+    result = await fetchRacerDataWrapper(racerId, year, 'road-track');
+  } catch (err) {
+    const duration = Date.now() - attemptStart;
+    attemptLog.error('cache_build_failed', {
+      duration_ms: duration,
+      reason: err.message,
+      err,
+      cache_written: false,
+      // Help future-us reason about the failure: capture what we'd previously
+      // cached (if anything) so we can compare success vs skip patterns.
+      previous_cache_exists: fs.existsSync(cacheFilePath),
+    });
+    return {
+      status: 'failed',
+      detail: { racerId, name: racer.name, status: 'failed', error: err.message },
+    };
+  }
+
+  const cacheEntry = { data: result, timestamp: now };
+
+  // Surface exactly what is about to land in the cache so a single grep tells
+  // you: "here is the rider, here is what we extracted, here is what got
+  // written to disk." Useful when the page parses but extraction returns
+  // empty values (a soft failure that previously poisoned the cache silently).
+  attemptLog.info('cache_values_extracted', {
+    duration_ms: Date.now() - attemptStart,
+    timestamp: cacheEntry.timestamp,
+    values: {
+      name: result.name,
+      club: result.club,
+      club_id: result.clubId,
+      category: result.category,
+      points: result.points,
+      race_count: result.raceCount,
+      road_and_track_points: result.roadAndTrackPoints,
+      road_and_track_race_count: result.roadAndTrackRaceCount,
+      regional_points: result.regionalPoints,
+      national_points: result.nationalPoints,
+    },
+  });
+
+  // Heuristic: if the page parsed but every meaningful field is empty/zero,
+  // we almost certainly hit a layout change or a partial Cloudflare bypass.
+  // Caching that would mask the real problem, so warn loudly.
+  const looksEmpty =
+    !result.name &&
+    !result.club &&
+    !result.category &&
+    result.points === 0 &&
+    result.raceCount === 0;
+  if (looksEmpty) {
+    attemptLog.warn('cache_values_suspicious', {
+      reason: 'all_extracted_fields_empty_or_zero',
+      values: result,
+    });
+  }
+
+  cache[cacheKey] = cacheEntry;
+
+  let bytesWritten = 0;
+  try {
+    const serialized = JSON.stringify(cacheEntry);
+    fs.writeFileSync(cacheFilePath, serialized, 'utf8');
+    bytesWritten = Buffer.byteLength(serialized, 'utf8');
+  } catch (writeErr) {
+    attemptLog.error('cache_disk_write_failed', {
+      err: writeErr,
+      intended_payload: cacheEntry,
+    });
+    return {
+      status: 'failed',
+      detail: { racerId, name: racer.name, status: 'failed', error: writeErr.message },
+    };
+  }
+
+  attemptLog.info('cache_built', {
+    duration_ms: Date.now() - attemptStart,
+    bytes_written: bytesWritten,
+    timestamp: cacheEntry.timestamp,
+    name: result.name,
+    points: result.points,
+    race_count: result.raceCount,
+  });
+
+  // Update racers file with the freshly-fetched name.
+  try {
+    if (result.name && (!racer.name || racer.name !== result.name)) {
+      racer.name = result.name;
+      fs.writeFileSync(RACERS_FILE, JSON.stringify(racers, null, 2), 'utf8');
+      attemptLog.debug('racers_file_name_updated', { name: result.name });
+    }
+  } catch (writeErr) {
+    attemptLog.error('racers_file_name_update_failed', { err: writeErr });
+  }
+
+  return {
+    status: 'cached',
+    detail: { racerId, name: result.name, status: 'cached' },
+  };
+}
+
 // New endpoint to build cache for all racers - PROTECTED
 app.post('/api/build-cache', verifyToken, async (req, res) => {
   const { year, racerId } = req.body || req.query;
@@ -303,117 +429,72 @@ app.post('/api/build-cache', verifyToken, async (req, res) => {
   }
 
   const now = Date.now();
+  const targets = racerId
+    ? racers.filter(r => r.bc === racerId)
+    : racers.slice();
+
+  if (racerId && targets.length === 0) {
+    log.warn('cache_build_racer_not_found', { racer_id: racerId, year });
+    return res.status(404).json({
+      success: false,
+      message: `Racer with ID ${racerId} not found`,
+    });
+  }
+
   const results = {
     success: true,
-    totalRacers: racerId ? 1 : racers.length,
+    totalRacers: targets.length,
     cached: 0,
     failed: 0,
     skipped: 0,
-    details: []
+    details: [],
   };
 
+  log.info('cache_build_batch_start', {
+    total_racers: targets.length,
+    year,
+    scope: racerId ? 'single' : 'all',
+    target_racer_id: racerId || null,
+  });
+
+  const batchStart = Date.now();
+
   try {
-    // If racerId is provided, only build cache for that racer
-    if (racerId) {
-      const racer = racers.find(r => r.bc === racerId);
+    for (let i = 0; i < targets.length; i++) {
+      const racer = targets[i];
+      const outcome = await buildCacheForRacer(racer, year, {
+        now,
+        index: i + 1,
+        total: targets.length,
+      });
 
-      if (!racer) {
-        return res.status(404).json({
-          success: false,
-          message: `Racer with ID ${racerId} not found`
-        });
-      }
-
-      const cacheKey = `${racerId}_${year}_road-track`;
-      const cacheFilePath = path.join(CACHE_DIR, `${cacheKey}.json`);
-
-      try {
-        // Fetch data from BC API
-        const result = await fetchRacerDataWrapper(racerId, year, 'road-track');
-        const cacheEntry = { data: result, timestamp: now };
-
-        // Update memory cache
-        cache[cacheKey] = cacheEntry;
-
-        // Write to disk cache
-        fs.writeFileSync(cacheFilePath, JSON.stringify(cacheEntry), 'utf8');
-
-        results.cached++;
-        results.details.push({
-          racerId,
-          name: result.name,
-          status: 'cached'
-        });
-
-        // Update racers file with fetched name
-        try {
-          if (result.name && (!racer.name || racer.name !== result.name)) {
-            racer.name = result.name;
-            fs.writeFileSync(RACERS_FILE, JSON.stringify(racers, null, 2), 'utf8');
-          }
-        } catch (writeErr) {
-          log.error('racers_file_name_update_failed', { err: writeErr, racer_id: racerId });
-        }
-      } catch (err) {
-        results.failed++;
-        results.details.push({
-          racerId,
-          name: racer.name,
-          status: 'failed',
-          error: err.message
-        });
-        log.error('cache_build_failed', { err, racer_id: racerId, year });
-      }
-    } else {
-      // Process each racer and build cache
-      for (const racer of racers) {
-        const racerId = racer.bc;
-        const cacheKey = `${racerId}_${year}_road-track`;
-        const cacheFilePath = path.join(CACHE_DIR, `${cacheKey}.json`);
-
-        try {
-          // Fetch data from BC API
-          const result = await fetchRacerDataWrapper(racerId, year, 'road-track');
-          const cacheEntry = { data: result, timestamp: now };
-
-          // Update memory cache
-          cache[cacheKey] = cacheEntry;
-
-          // Write to disk cache
-          fs.writeFileSync(cacheFilePath, JSON.stringify(cacheEntry), 'utf8');
-
-          results.cached++;
-          results.details.push({
-            racerId,
-            name: result.name,
-            status: 'cached'
-          });
-
-          // Update racers file with fetched name
-          try {
-            if (result.name && (!racer.name || racer.name !== result.name)) {
-              racer.name = result.name;
-              fs.writeFileSync(RACERS_FILE, JSON.stringify(racers, null, 2), 'utf8');
-            }
-          } catch (writeErr) {
-            log.error('racers_file_name_update_failed', { err: writeErr, racer_id: racerId });
-          }
-        } catch (err) {
-          results.failed++;
-          results.details.push({
-            racerId,
-            name: racer.name,
-            status: 'failed',
-            error: err.message
-          });
-          log.error('cache_build_failed', { err, racer_id: racerId, year });
-        }
-      }
+      if (outcome.status === 'cached') results.cached++;
+      else if (outcome.status === 'failed') results.failed++;
+      else results.skipped++;
+      results.details.push(outcome.detail);
     }
+
+    log.info('cache_build_batch_done', {
+      duration_ms: Date.now() - batchStart,
+      total_racers: results.totalRacers,
+      cached: results.cached,
+      failed: results.failed,
+      skipped: results.skipped,
+      year,
+    });
 
     res.json(results);
   } catch (err) {
-    log.error('cache_build_batch_failed', { err, year });
+    log.error('cache_build_batch_failed', {
+      err,
+      year,
+      duration_ms: Date.now() - batchStart,
+      partial_results: {
+        cached: results.cached,
+        failed: results.failed,
+        skipped: results.skipped,
+      },
+    });
     res.status(500).send("Failed to build cache");
   }
 });
