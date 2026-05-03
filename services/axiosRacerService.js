@@ -1,16 +1,16 @@
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
+const { logger } = require('./logger');
 
-// Helper functions (same as before)
 function processRegularPoints(html) {
   let raceCount = 0;
   let totalPoints = 0;
   let regionalPoints = 0;
   let nationalPoints = 0;
 
-  const tbodyStart = html.indexOf("<tbody>");
-  const tbodyEnd = html.indexOf("</tbody>");
+  const tbodyStart = html.indexOf('<tbody>');
+  const tbodyEnd = html.indexOf('</tbody>');
 
   if (tbodyStart !== -1 && tbodyEnd !== -1) {
     const tbody = html.slice(tbodyStart, tbodyEnd);
@@ -18,20 +18,20 @@ function processRegularPoints(html) {
     const uniqueEventIds = new Set(eventIdMatches.map(match => match[1]));
     raceCount = uniqueEventIds.size;
 
-    const rows = tbody.split("<tr>");
+    const rows = tbody.split('<tr>');
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
-      const cells = row.split("<td>");
+      const cells = row.split('<td>');
 
       if (cells.length >= 6) {
         const categoryCell = cells[2];
         const pointsCell = cells[5];
-        const pointsEndIndex = pointsCell.indexOf("</td>");
+        const pointsEndIndex = pointsCell.indexOf('</td>');
         if (pointsEndIndex !== -1) {
           const pointsValue = pointsCell.substring(0, pointsEndIndex).trim();
           const points = isNaN(Number(pointsValue)) ? 0 : Number(pointsValue);
 
-          if (categoryCell.includes("National")) {
+          if (categoryCell.includes('National')) {
             nationalPoints += points;
           } else {
             regionalPoints += points;
@@ -41,15 +41,15 @@ function processRegularPoints(html) {
     }
   }
 
-  const tfootStart = html.indexOf("<tfoot>");
+  const tfootStart = html.indexOf('<tfoot>');
   if (tfootStart !== -1) {
-    let pos = html.indexOf("<td>", tfootStart);
+    let pos = html.indexOf('<td>', tfootStart);
     for (let i = 0; i < 4 && pos !== -1; i++) {
-      pos = html.indexOf("<td>", pos + 1);
+      pos = html.indexOf('<td>', pos + 1);
     }
     if (pos !== -1) {
       const start = pos + 4;
-      const end = html.indexOf("</td>", start);
+      const end = html.indexOf('</td>', start);
       const value = html.slice(start, end).trim();
       totalPoints = isNaN(Number(value)) ? 0 : Number(value);
     }
@@ -58,7 +58,7 @@ function processRegularPoints(html) {
   return { raceCount, totalPoints, regionalPoints, nationalPoints };
 }
 
-function processCyclocrossPoints(html) {
+function processCyclocrossPoints(_html) {
   // Cyclocross disabled
   return { raceCount: 0, totalPoints: 0, regionalPoints: 0, nationalPoints: 0 };
 }
@@ -66,12 +66,11 @@ function processCyclocrossPoints(html) {
 const userAgents = [
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
 ];
 
 // Debug function to save response data when running locally
-function saveDebugResponse(url, response, person_id, discipline, requestType = 'unknown') {
-  // Only save debug files when running locally
+function saveDebugResponse(log, url, response, person_id, discipline, requestType = 'unknown') {
   if (process.env.NODE_ENV === 'production') {
     return;
   }
@@ -99,36 +98,38 @@ function saveDebugResponse(url, response, person_id, discipline, requestType = '
       headers: response.headers,
       data_length: response.data ? response.data.length : 0,
       data_preview: response.data ? response.data.substring(0, 1000) : null,
-      full_data: response.data
+      full_data: response.data,
     };
 
-    // Save JSON debug file
     fs.writeFileSync(jsonFilepath, JSON.stringify(debugData, null, 2), 'utf8');
-    console.log(`[${person_id}] DEBUG_SAVED: ${jsonFilepath}`);
+    log.debug('debug_response_saved', { path: jsonFilepath, request_type: requestType });
 
-    // Save HTML file separately
     if (response.data) {
       fs.writeFileSync(htmlFilepath, response.data, 'utf8');
-      console.log(`[${person_id}] DEBUG_HTML_SAVED: ${htmlFilepath}`);
+      log.debug('debug_html_saved', { path: htmlFilepath, request_type: requestType });
     }
   } catch (err) {
-    console.error(`[${person_id}] DEBUG_SAVE_ERROR: ${err.message}`);
+    log.error('debug_response_save_error', { err });
   }
 }
 
 // Wrapper for fetchWithRetry that includes context for debugging
-async function fetchWithRetryWithContext(url, person_id, discipline, requestType, maxRetries = 3) {
+async function fetchWithRetryWithContext(log, url, person_id, discipline, requestType, maxRetries = 3) {
   for (let i = 0; i < maxRetries; i++) {
     const attemptStart = Date.now();
     try {
-      // Add delay between requests to avoid rate limiting
       if (i > 0) {
-        const delay = 2000 + (i * 3000); // 2s, 5s, 8s delays
-        console.log(`AXIOS_DELAY: waiting ${delay}ms to avoid rate limiting`);
+        const delay = 2000 + (i * 3000);
+        log.info('axios_delay', { wait_ms: delay, reason: 'rate_limit_backoff' });
         await new Promise(resolve => setTimeout(resolve, delay));
       }
-      
-      console.log(`AXIOS_REQUEST: attempt=${i + 1}/${maxRetries}, url=${url}, timeout=60000ms`);
+
+      log.info('axios_request', {
+        attempt: i + 1,
+        max_retries: maxRetries,
+        url,
+        timeout_ms: 60000,
+      });
       const response = await axios.get(url, {
         timeout: 60000,
         headers: {
@@ -141,103 +142,99 @@ async function fetchWithRetryWithContext(url, person_id, discipline, requestType
           'Sec-Fetch-Dest': 'document',
           'Sec-Fetch-Mode': 'navigate',
           'Sec-Fetch-Site': 'none',
-          'Upgrade-Insecure-Requests': '1'
-        }
+          'Upgrade-Insecure-Requests': '1',
+        },
       });
       const duration = Date.now() - attemptStart;
-      console.log(`AXIOS_SUCCESS: attempt=${i + 1}, duration=${duration}ms, status=${response.status}, content_length=${response.data?.length}`);
-      
-      // Save debug response if running locally
+      log.info('axios_success', {
+        attempt: i + 1,
+        duration_ms: duration,
+        status: response.status,
+        content_length: response.data?.length,
+      });
+
       if (process.env.NODE_ENV !== 'production') {
-        saveDebugResponse(url, response, person_id, discipline, requestType);
+        saveDebugResponse(log, url, response, person_id, discipline, requestType);
       }
-      
+
       return response.data;
     } catch (err) {
       const duration = Date.now() - attemptStart;
-      console.log(`AXIOS_RETRY: attempt=${i + 1}/${maxRetries}, duration=${duration}ms, error_code=${err.code}, error_msg="${err.message}", status=${err.response?.status}`);
-      if (i === maxRetries - 1) throw err;
-      // Don't add extra wait here since we already delay at start of next iteration
-    }
-  }
-}
-
-async function fetchWithRetry(url, maxRetries = 3) {
-  for (let i = 0; i < maxRetries; i++) {
-    const attemptStart = Date.now();
-    try {
-      // Add delay between requests to avoid rate limiting
-      if (i > 0) {
-        const delay = 2000 + (i * 3000); // 2s, 5s, 8s delays
-        console.log(`AXIOS_DELAY: waiting ${delay}ms to avoid rate limiting`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-      
-      console.log(`AXIOS_REQUEST: attempt=${i + 1}/${maxRetries}, url=${url}, timeout=60000ms`);
-      const response = await axios.get(url, {
-        timeout: 60000,
-        headers: {
-          'User-Agent': userAgents[i % userAgents.length],
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-          'Accept-Language': 'en-GB,en;q=0.9',
-          'Accept-Encoding': 'gzip, deflate, br',
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache',
-          'Sec-Fetch-Dest': 'document',
-          'Sec-Fetch-Mode': 'navigate',
-          'Sec-Fetch-Site': 'none',
-          'Upgrade-Insecure-Requests': '1'
-        }
+      log.warn('axios_retry', {
+        attempt: i + 1,
+        max_retries: maxRetries,
+        duration_ms: duration,
+        error_code: err.code,
+        error_message: err.message,
+        status: err.response?.status,
       });
-      const duration = Date.now() - attemptStart;
-      console.log(`AXIOS_SUCCESS: attempt=${i + 1}, duration=${duration}ms, status=${response.status}, content_length=${response.data?.length}`);
-      
-      // Note: Debug saving is handled in fetchWithRetryWithContext, not here
-      
-      return response.data;
-    } catch (err) {
-      const duration = Date.now() - attemptStart;
-      console.log(`AXIOS_RETRY: attempt=${i + 1}/${maxRetries}, duration=${duration}ms, error_code=${err.code}, error_msg="${err.message}", status=${err.response?.status}`);
       if (i === maxRetries - 1) throw err;
-      // Don't add extra wait here since we already delay at start of next iteration
     }
   }
 }
 
-async function fetchRacerData(person_id, year, clubsFile, discipline = 'both') {
+// Detect a real Cloudflare interstitial / blocked response.
+function isBlockedResponse(html) {
+  if (!html || typeof html !== 'string') return true;
+  if (html.length < 1000) return true;
+  if (html.includes('403 Forbidden')) return true;
+  const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i);
+  const title = titleMatch ? titleMatch[1].trim() : '';
+  if (/^Just a moment/i.test(title)) return true;
+  if (/^Attention Required/i.test(title)) return true;
+  if (html.includes('id="challenge-form"')) return true;
+  if (html.includes('cf-browser-verification')) return true;
+  if (html.includes('cf-challenge-running')) return true;
+  if (html.includes('window._cf_chl_opt')) return true;
+  if (html.includes('Checking your browser before accessing')) return true;
+  return false;
+}
+
+async function fetchRacerData(person_id, year, _clubsFile, discipline = 'both') {
   const startTime = Date.now();
-  console.log(`[${person_id}] AXIOS_START: timestamp=${new Date().toISOString()}, person_id=${person_id}, year=${year}, discipline=${discipline}`);
-  
+  const log = logger.child({
+    component: 'axios',
+    person_id,
+    year,
+    discipline,
+  });
+
+  log.info('fetch_start', { timestamp: new Date().toISOString() });
+
   try {
     let name = '';
     let club = '';
     let clubId = '';
     let category = '';
     const currentYear = new Date().getFullYear().toString();
-    
+
     let regularData = { raceCount: 0, totalPoints: 0, regionalPoints: 0, nationalPoints: 0 };
     let cyclocrossData = { raceCount: 0, totalPoints: 0, regionalPoints: 0, nationalPoints: 0 };
 
-    // Fetch road and track data if requested
     if (discipline === 'road-track' || discipline === 'both') {
       const regularUrl = `https://www.britishcycling.org.uk/points?d=4&person_id=${person_id}&year=${year}`;
-      const regularHtml = await fetchWithRetryWithContext(regularUrl, person_id, discipline, 'road-track');
-      
-      if (regularHtml.includes('Just a moment') || regularHtml.includes('cloudflare') || regularHtml.includes('403 Forbidden') || regularHtml.length < 1000) {
-        console.log(`AXIOS_BLOCKED: detected blocking, html_length=${regularHtml.length}, contains_403=${regularHtml.includes('403')}, contains_cloudflare=${regularHtml.includes('cloudflare')}`);
+      const regularHtml = await fetchWithRetryWithContext(log, regularUrl, person_id, discipline, 'road-track');
+
+      if (isBlockedResponse(regularHtml)) {
+        log.warn('axios_blocked', {
+          html_length: regularHtml ? regularHtml.length : 0,
+          contains_403: !!(regularHtml && regularHtml.includes('403')),
+        });
         throw new Error('Request blocked - use Puppeteer fallback');
       }
-      
-      console.log(`AXIOS_HTML_OK: regular_page loaded, html_length=${regularHtml.length}`);
 
-      // Extract data from road/track page
+      log.info('axios_html_ok', {
+        html_length: regularHtml.length,
+        request_type: 'road-track',
+      });
+
       const nameMatch = regularHtml.match(/<h1 class="article__header__title-opener">Points: ([^<]+)<\/h1>/);
       name = nameMatch?.[1]?.trim() || '';
-      
-      const clubRegex = year === currentYear 
+
+      const clubRegex = year === currentYear
         ? /<dd>Current Club: <a[^>]*href="\/clubpoints\/\?club_id=(\d+)[^"]*">([^<]+)<\/a>/
         : /<dd>Year End Club: <a[^>]*href="\/clubpoints\/\?club_id=(\d+)[^"]*">([^<]+)<\/a>/;
-      
+
       const clubMatch = regularHtml.match(clubRegex);
       if (clubMatch?.[2]) {
         club = clubMatch[2].trim();
@@ -249,8 +246,6 @@ async function fetchRacerData(person_id, year, clubsFile, discipline = 'both') {
 
       regularData = processRegularPoints(regularHtml);
     }
-
-    // Cyclocross fetching disabled
 
     const result = {
       raceCount: regularData.raceCount + cyclocrossData.raceCount,
@@ -269,15 +264,24 @@ async function fetchRacerData(person_id, year, clubsFile, discipline = 'both') {
       roadNationalPoints: regularData.nationalPoints,
       cxRegionalPoints: 0,
       cxNationalPoints: 0,
-      discipline: 'road-track'
+      discipline: 'road-track',
     };
-    
+
     const duration = Date.now() - startTime;
-    console.log(`[${person_id}] AXIOS_END: success=true, duration=${duration}ms, points=${result.points}, races=${result.raceCount}, discipline=${discipline}`);
+    log.info('fetch_end', {
+      success: true,
+      duration_ms: duration,
+      points: result.points,
+      races: result.raceCount,
+    });
     return result;
   } catch (err) {
     const duration = Date.now() - startTime;
-    console.log(`[${person_id}] AXIOS_END: success=false, duration=${duration}ms, error="${err.message}", discipline=${discipline}`);
+    log.error('fetch_end', {
+      success: false,
+      duration_ms: duration,
+      err,
+    });
     throw err;
   }
 }

@@ -1,10 +1,10 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
+const { logger } = require('./logger');
 
 // Debug function to save page content when running locally
-function saveDebugPageContent(url, html, person_id, discipline, requestType = 'unknown') {
-  // Only save debug files when running locally
+function saveDebugPageContent(log, url, html, person_id, discipline, requestType = 'unknown') {
   if (process.env.NODE_ENV === 'production') {
     return;
   }
@@ -32,54 +32,58 @@ function saveDebugPageContent(url, html, person_id, discipline, requestType = 'u
       full_html: html
     };
 
-    // Save JSON debug file
     fs.writeFileSync(jsonFilepath, JSON.stringify(debugData, null, 2), 'utf8');
-    console.log(`[${person_id}] DEBUG_PAGE_SAVED: ${jsonFilepath}`);
+    log.debug('debug_page_saved', { path: jsonFilepath, request_type: requestType });
 
-    // Save HTML file separately
     if (html) {
       fs.writeFileSync(htmlFilepath, html, 'utf8');
-      console.log(`[${person_id}] DEBUG_HTML_SAVED: ${htmlFilepath}`);
+      log.debug('debug_html_saved', { path: htmlFilepath, request_type: requestType });
     }
   } catch (err) {
-    console.error(`[${person_id}] DEBUG_PAGE_SAVE_ERROR: ${err.message}`);
+    log.error('debug_page_save_error', { err });
   }
 }
 
 // Helper function to process regular points from HTML
-function processRegularPoints(html) {
-  console.log('PROCESS_REGULAR: Starting HTML processing');
+function processRegularPoints(html, log = logger) {
   let raceCount = 0;
   let totalPoints = 0;
   let regionalPoints = 0;
   let nationalPoints = 0;
 
-  const tbodyStart = html.indexOf("<tbody>");
-  const tbodyEnd = html.indexOf("</tbody>");
-  console.log(`PROCESS_REGULAR: tbody found=${tbodyStart !== -1 && tbodyEnd !== -1}, start=${tbodyStart}, end=${tbodyEnd}`);
+  const tbodyStart = html.indexOf('<tbody>');
+  const tbodyEnd = html.indexOf('</tbody>');
+  log.debug('process_regular_tbody', {
+    tbody_found: tbodyStart !== -1 && tbodyEnd !== -1,
+    tbody_start: tbodyStart,
+    tbody_end: tbodyEnd,
+  });
 
   if (tbodyStart !== -1 && tbodyEnd !== -1) {
     const tbody = html.slice(tbodyStart, tbodyEnd);
     const eventIdMatches = [...tbody.matchAll(/\/events\/details\/(\d+)\//g)];
     const uniqueEventIds = new Set(eventIdMatches.map(match => match[1]));
     raceCount = uniqueEventIds.size;
-    console.log(`PROCESS_REGULAR: Found ${eventIdMatches.length} event matches, ${raceCount} unique races`);
+    log.debug('process_regular_events', {
+      event_matches: eventIdMatches.length,
+      unique_races: raceCount,
+    });
 
-    const rows = tbody.split("<tr>");
-    console.log(`PROCESS_REGULAR: Processing ${rows.length - 1} table rows`);
+    const rows = tbody.split('<tr>');
+    log.debug('process_regular_rows', { row_count: rows.length - 1 });
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
-      const cells = row.split("<td>");
+      const cells = row.split('<td>');
 
       if (cells.length >= 6) {
         const categoryCell = cells[2];
         const pointsCell = cells[5];
-        const pointsEndIndex = pointsCell.indexOf("</td>");
+        const pointsEndIndex = pointsCell.indexOf('</td>');
         if (pointsEndIndex !== -1) {
           const pointsValue = pointsCell.substring(0, pointsEndIndex).trim();
           const points = isNaN(Number(pointsValue)) ? 0 : Number(pointsValue);
 
-          if (categoryCell.includes("National")) {
+          if (categoryCell.includes('National')) {
             nationalPoints += points;
           } else {
             regionalPoints += points;
@@ -89,110 +93,146 @@ function processRegularPoints(html) {
     }
   }
 
-  const tfootStart = html.indexOf("<tfoot>");
-  console.log(`PROCESS_REGULAR: tfoot found=${tfootStart !== -1}`);
+  const tfootStart = html.indexOf('<tfoot>');
+  log.debug('process_regular_tfoot', { tfoot_found: tfootStart !== -1 });
   if (tfootStart !== -1) {
-    const tfootSection = html.slice(tfootStart, tfootStart + 500);
-    console.log(`PROCESS_REGULAR: tfoot preview=${tfootSection.replace(/\n/g, ' ').replace(/\s+/g, ' ')}`);
-    let pos = html.indexOf("<td>", tfootStart);
+    let pos = html.indexOf('<td>', tfootStart);
     for (let i = 0; i < 4 && pos !== -1; i++) {
-      pos = html.indexOf("<td>", pos + 1);
+      pos = html.indexOf('<td>', pos + 1);
     }
     if (pos !== -1) {
       const start = pos + 4;
-      const end = html.indexOf("</td>", start);
+      const end = html.indexOf('</td>', start);
       const value = html.slice(start, end).trim();
       totalPoints = isNaN(Number(value)) ? 0 : Number(value);
-      console.log(`PROCESS_REGULAR: Total points extracted='${value}', parsed=${totalPoints}`);
+      log.debug('process_regular_total', { raw_value: value, parsed: totalPoints });
     }
   }
 
-  console.log(`PROCESS_REGULAR: Final results - races=${raceCount}, total=${totalPoints}, regional=${regionalPoints}, national=${nationalPoints}`);
+  log.info('process_regular_done', {
+    races: raceCount,
+    total_points: totalPoints,
+    regional_points: regionalPoints,
+    national_points: nationalPoints,
+  });
   return { raceCount, totalPoints, regionalPoints, nationalPoints };
 }
 
 // Helper function to process cyclocross points from HTML
-function processCyclocrossPoints(html) {
+function processCyclocrossPoints(_html) {
   // Cyclocross disabled
   return { raceCount: 0, totalPoints: 0, regionalPoints: 0, nationalPoints: 0 };
+}
+
+// Detect a real Cloudflare interstitial. We deliberately avoid loose
+// substring checks like html.includes('cloudflare') because the real
+// British Cycling page legitimately references Cloudflare-hosted assets
+// and third-party domains, which would cause false positives.
+function isCloudflareChallenge(html) {
+  const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i);
+  const title = titleMatch ? titleMatch[1].trim() : '';
+  if (/^Just a moment/i.test(title)) return true;
+  if (/^Attention Required/i.test(title)) return true;
+  if (html.includes('id="challenge-form"')) return true;
+  if (html.includes('cf-browser-verification')) return true;
+  if (html.includes('cf-challenge-running')) return true;
+  if (html.includes('window._cf_chl_opt')) return true;
+  if (html.includes('Checking your browser before accessing')) return true;
+  return false;
+}
+
+// Resolve Chrome/Edge executable cross-platform. If not found, fall back
+// to Puppeteer's bundled Chromium.
+function resolveChromeExecutable() {
+  if (process.env.CHROME_EXECUTABLE && fs.existsSync(process.env.CHROME_EXECUTABLE)) {
+    return process.env.CHROME_EXECUTABLE;
+  }
+
+  const platform = process.platform;
+  if (platform === 'linux') {
+    const linuxPaths = [
+      '/usr/bin/google-chrome',
+      '/usr/bin/google-chrome-stable',
+      '/usr/bin/chromium',
+      '/usr/bin/chromium-browser',
+    ];
+    for (const p of linuxPaths) {
+      if (fs.existsSync(p)) return p;
+    }
+    return null;
+  }
+
+  if (platform === 'win32') {
+    const candidates = [];
+    const programFiles = process.env['PROGRAMFILES'];
+    const programFilesX86 = process.env['PROGRAMFILES(X86)'];
+    const localAppData = process.env['LOCALAPPDATA'];
+    if (programFiles) {
+      candidates.push(path.join(programFiles, 'Google', 'Chrome', 'Application', 'chrome.exe'));
+      candidates.push(path.join(programFiles, 'Microsoft', 'Edge', 'Application', 'msedge.exe'));
+    }
+    if (programFilesX86) {
+      candidates.push(path.join(programFilesX86, 'Google', 'Chrome', 'Application', 'chrome.exe'));
+      candidates.push(path.join(programFilesX86, 'Microsoft', 'Edge', 'Application', 'msedge.exe'));
+    }
+    if (localAppData) {
+      candidates.push(path.join(localAppData, 'Google', 'Chrome', 'Application', 'chrome.exe'));
+      candidates.push(path.join(localAppData, 'Microsoft', 'Edge', 'Application', 'msedge.exe'));
+    }
+    for (const p of candidates) {
+      if (fs.existsSync(p)) return p;
+    }
+    return null;
+  }
+
+  if (platform === 'darwin') {
+    const macPaths = [
+      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+      '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
+    ];
+    for (const p of macPaths) {
+      if (fs.existsSync(p)) return p;
+    }
+    return null;
+  }
+
+  return null;
 }
 
 // Main service function to fetch and process racer data
 async function fetchRacerData(person_id, year, clubsFile, discipline = 'both') {
   const startTime = Date.now();
-  console.log(`[${person_id}] PUPPETEER_START: timestamp=${new Date().toISOString()}, person_id=${person_id}, year=${year}, discipline=${discipline}`);
-  
+  const log = logger.child({
+    component: 'puppeteer',
+    person_id,
+    year,
+    discipline,
+  });
+
+  log.info('fetch_start', {
+    timestamp: new Date().toISOString(),
+  });
+
   const launchStart = Date.now();
-  console.log(`[${person_id}] PUPPETEER_LAUNCH: starting browser, timeout=300000ms, protocol_timeout=300000ms`);
-  
+  log.info('puppeteer_launch', {
+    timeout_ms: 300000,
+    protocol_timeout_ms: 300000,
+  });
+
   let browser;
   let foundChrome = null;
-  
+
   try {
-    console.log(`[${person_id}] PUPPETEER_ENV: NODE_ENV=${process.env.NODE_ENV}, Platform=${process.platform}`);
-
-    // Resolve Chrome/Edge executable cross-platform. If not found, fall back to Puppeteer's bundled Chromium.
-    function resolveChromeExecutable() {
-      if (process.env.CHROME_EXECUTABLE && fs.existsSync(process.env.CHROME_EXECUTABLE)) {
-        return process.env.CHROME_EXECUTABLE;
-      }
-
-      const platform = process.platform;
-      if (platform === 'linux') {
-        const linuxPaths = [
-          '/usr/bin/google-chrome',
-          '/usr/bin/google-chrome-stable',
-          '/usr/bin/chromium',
-          '/usr/bin/chromium-browser'
-        ];
-        for (const p of linuxPaths) {
-          if (fs.existsSync(p)) return p;
-        }
-        return null;
-      }
-
-      if (platform === 'win32') {
-        const candidates = [];
-        const programFiles = process.env['PROGRAMFILES'];
-        const programFilesX86 = process.env['PROGRAMFILES(X86)'];
-        const localAppData = process.env['LOCALAPPDATA'];
-        if (programFiles) {
-          candidates.push(path.join(programFiles, 'Google', 'Chrome', 'Application', 'chrome.exe'));
-          candidates.push(path.join(programFiles, 'Microsoft', 'Edge', 'Application', 'msedge.exe'));
-        }
-        if (programFilesX86) {
-          candidates.push(path.join(programFilesX86, 'Google', 'Chrome', 'Application', 'chrome.exe'));
-          candidates.push(path.join(programFilesX86, 'Microsoft', 'Edge', 'Application', 'msedge.exe'));
-        }
-        if (localAppData) {
-          candidates.push(path.join(localAppData, 'Google', 'Chrome', 'Application', 'chrome.exe'));
-          candidates.push(path.join(localAppData, 'Microsoft', 'Edge', 'Application', 'msedge.exe'));
-        }
-        for (const p of candidates) {
-          if (fs.existsSync(p)) return p;
-        }
-        return null;
-      }
-
-      if (platform === 'darwin') {
-        const macPaths = [
-          '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-          '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge'
-        ];
-        for (const p of macPaths) {
-          if (fs.existsSync(p)) return p;
-        }
-        return null;
-      }
-
-      return null;
-    }
+    log.debug('puppeteer_env', {
+      node_env: process.env.NODE_ENV,
+      platform: process.platform,
+    });
 
     foundChrome = resolveChromeExecutable();
     if (foundChrome) {
-      console.log(`[${person_id}] CHROME_EXECUTABLE_FOUND: ${foundChrome}`);
+      log.info('chrome_executable_found', { path: foundChrome });
     } else {
-      console.log(`[${person_id}] CHROME_NOT_FOUND: Falling back to Puppeteer's bundled Chromium`);
+      log.info('chrome_not_found', { fallback: 'puppeteer_bundled_chromium' });
     }
 
     const launchOptions = {
@@ -214,8 +254,8 @@ async function fetchRacerData(person_id, year, clubsFile, discipline = 'both') {
         '--no-first-run',
         '--no-default-browser-check',
         '--js-flags=--max-old-space-size=384',
-        '--window-size=1280,720'
-      ]
+        '--window-size=1280,720',
+      ],
     };
     if (foundChrome) {
       launchOptions.executablePath = foundChrome;
@@ -223,151 +263,139 @@ async function fetchRacerData(person_id, year, clubsFile, discipline = 'both') {
 
     browser = await Promise.race([
       puppeteer.launch(launchOptions),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Browser launch timeout after 30s')), 30000))
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Browser launch timeout after 30s')), 30000)
+      ),
     ]);
   } catch (err) {
     const launchDuration = Date.now() - launchStart;
     const memInfo = process.memoryUsage();
-    console.log(`[${person_id}] PUPPETEER_LAUNCH_FAILED: duration=${launchDuration}ms, error="${err.message}"`);
-    console.log(`[${person_id}] MEMORY_DETAILED: heap=${(memInfo.heapUsed/1024/1024).toFixed(1)}MB, rss=${(memInfo.rss/1024/1024).toFixed(1)}MB, external=${(memInfo.external/1024/1024).toFixed(1)}MB`);
-    console.log(`[${person_id}] SYSTEM_DETAILED: uptime=${process.uptime()}s, platform=${process.platform}, arch=${process.arch}`);
-    
-    // Check if Chrome processes are running (best-effort, platform-specific)
+    log.error('puppeteer_launch_failed', {
+      duration_ms: launchDuration,
+      err,
+      memory: {
+        heap_mb: +(memInfo.heapUsed / 1024 / 1024).toFixed(1),
+        rss_mb: +(memInfo.rss / 1024 / 1024).toFixed(1),
+        external_mb: +(memInfo.external / 1024 / 1024).toFixed(1),
+      },
+      system: {
+        uptime_s: process.uptime(),
+        platform: process.platform,
+        arch: process.arch,
+      },
+    });
+
+    // Best-effort: check whether Chrome processes are running on the host.
     try {
       const { execSync } = require('child_process');
       if (process.platform === 'win32') {
         const processes = execSync('tasklist | findstr /I "chrome msedge chromium"', { encoding: 'utf8' });
-        console.log(`[${person_id}] CHROME_PROCESSES_WIN: ${processes.split('\n').filter(Boolean).length} lines`);
+        log.debug('chrome_processes_win', {
+          line_count: processes.split('\n').filter(Boolean).length,
+        });
       } else {
         const processes = execSync('ps aux | grep -E "(chrome|chromium|msedge)" || true', { encoding: 'utf8' });
-        console.log(`[${person_id}] CHROME_PROCESSES_UNIX: ${processes.split('\n').length - 1} processes found`);
+        log.debug('chrome_processes_unix', {
+          process_count: processes.split('\n').length - 1,
+        });
       }
     } catch (psErr) {
-      console.log(`[${person_id}] PROCESS_CHECK_FAILED: ${psErr.message}`);
+      log.debug('process_check_failed', { err: psErr });
     }
 
-    // Surface the original launch error
     throw new Error(`Browser launch failed: ${err.message}`);
   }
-  
+
   const launchDuration = Date.now() - launchStart;
-  console.log(`[${person_id}] PUPPETEER_LAUNCHED: browser ready in ${launchDuration}ms`);
-  
+  log.info('puppeteer_launched', { duration_ms: launchDuration });
+
   const pageStart = Date.now();
   const page = await browser.newPage();
   const pageDuration = Date.now() - pageStart;
-  console.log(`[${person_id}] PUPPETEER_PAGE: new page created in ${pageDuration}ms`);
+  log.info('puppeteer_page_created', { duration_ms: pageDuration });
 
-  await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+  await page.setUserAgent(
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+  );
   await page.setExtraHTTPHeaders({
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
     'Accept-Language': 'en-US,en;q=0.5',
     'Accept-Encoding': 'gzip, deflate',
     'Connection': 'keep-alive',
-    'Upgrade-Insecure-Requests': '1'
+    'Upgrade-Insecure-Requests': '1',
   });
 
   try {
-    console.log(`[${person_id}] PUPPETEER: Starting fetch for year ${year}`);
-    
-    // Fetch regular points
+    log.info('puppeteer_fetch_start');
+
     const regularUrl = `https://www.britishcycling.org.uk/points?d=4&person_id=${person_id}&year=${year}`;
-    console.log(`[${person_id}] PUPPETEER_GOTO_START: Fetching regular points: ${regularUrl}`);
+    log.info('puppeteer_goto_start', { request_type: 'road-track', url: regularUrl });
     const gotoStart = Date.now();
-    
+
     try {
       await Promise.race([
         page.goto(regularUrl, { waitUntil: 'networkidle2', timeout: 120000 }),
-        new Promise((_, reject) => 
+        new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Page goto timeout after 120s')), 120000)
-        )
+        ),
       ]);
     } catch (err) {
       const gotoDuration = Date.now() - gotoStart;
-      console.log(`[${person_id}] PUPPETEER_GOTO_FAILED: duration=${gotoDuration}ms, error="${err.message}"`);
+      log.error('puppeteer_goto_failed', { duration_ms: gotoDuration, err });
       throw err;
     }
-    
+
     const gotoDuration = Date.now() - gotoStart;
-    console.log(`[${person_id}] PUPPETEER_GOTO_SUCCESS: regular page loaded in ${gotoDuration}ms`);
-    
-    console.log(`[${person_id}] PUPPETEER_WAIT: Starting 5s wait`);
+    log.info('puppeteer_goto_success', { duration_ms: gotoDuration, request_type: 'road-track' });
+
+    log.debug('puppeteer_wait_start', { wait_ms: 5000 });
     await new Promise(resolve => setTimeout(resolve, 5000));
-    console.log(`[${person_id}] PUPPETEER_WAIT: 5s wait completed`);
+    log.debug('puppeteer_wait_done', { wait_ms: 5000 });
 
-      let regularHtml = await page.content();
-      console.log(`[${person_id}] Regular HTML length: ${regularHtml.length}`);
-      
-      // Save debug page content if running locally
-      if (process.env.NODE_ENV !== 'production') {
-        saveDebugPageContent(regularUrl, regularHtml, person_id, discipline, 'road-track');
-      }
-      
-      // Log key HTML sections for LLM analysis
-      const titleMatch = regularHtml.match(/<title[^>]*>([^<]*)<\/title>/i);
-      console.log(`[${person_id}] PAGE_TITLE: ${titleMatch ? titleMatch[1] : 'Not found'}`);
-      
-      const bodyStart = regularHtml.indexOf('<body');
-      const bodyContent = bodyStart !== -1 ? regularHtml.substring(bodyStart, bodyStart + 1000) : 'Body not found';
-      console.log(`[${person_id}] BODY_START: ${bodyContent.replace(/\n/g, ' ').replace(/\s+/g, ' ')}`);
-      
-    // Only treat the page as a Cloudflare challenge when we see strong, unambiguous
-    // markers. Substrings like "cloudflare" alone produce false positives because the
-    // real British Cycling page references Cloudflare-hosted assets and third-party
-    // domains. We instead look for the challenge title, the challenge form, or the
-    // managed-challenge script tokens that only appear on interstitial pages.
-    const isCloudflareChallenge = (html) => {
-      const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i);
-      const title = titleMatch ? titleMatch[1].trim() : '';
-      if (/^Just a moment/i.test(title)) return true;
-      if (/^Attention Required/i.test(title)) return true;
-      if (html.includes('id="challenge-form"')) return true;
-      if (html.includes('cf-browser-verification')) return true;
-      if (html.includes('cf-challenge-running')) return true;
-      if (html.includes('window._cf_chl_opt')) return true;
-      if (html.includes('Checking your browser before accessing')) return true;
-      return false;
-    };
+    let regularHtml = await page.content();
+    log.info('html_received', { html_length: regularHtml.length, request_type: 'road-track' });
 
-    if (isCloudflareChallenge(regularHtml)) {
-      console.log(`[${person_id}] CLOUDFLARE_DETECTED: Challenge page detected`);
-      const cfContent = regularHtml.substring(0, 2000).replace(/\n/g, ' ').replace(/\s+/g, ' ');
-      console.log(`[${person_id}] CLOUDFLARE_HTML: ${cfContent}`);
-      await new Promise(resolve => setTimeout(resolve, 20000));
-      regularHtml = await page.content();
-      console.log(`[${person_id}] After wait, regular HTML length: ${regularHtml.length}`);
-      if (isCloudflareChallenge(regularHtml)) {
-        console.log(`[${person_id}] CLOUDFLARE_PERSISTENT: Challenge not resolved`);
-        throw new Error('Cloudflare challenge not resolved');
-      }
-      console.log(`[${person_id}] CLOUDFLARE_RESOLVED: Challenge passed`);
+    if (process.env.NODE_ENV !== 'production') {
+      saveDebugPageContent(log, regularUrl, regularHtml, person_id, discipline, 'road-track');
     }
 
-    // Log HTML structure for data extraction analysis
-    const headerSection = regularHtml.match(/<h1[^>]*class="article__header__title-opener"[^>]*>.*?<\/h1>/s);
-    console.log(`[${person_id}] HEADER_SECTION: ${headerSection ? headerSection[0] : 'Not found'}`);
-    
-    const ddSections = [...regularHtml.matchAll(/<dd>[^<]*(?:<a[^>]*>[^<]*<\/a>)?[^<]*<\/dd>/g)];
-    console.log(`[${person_id}] DD_SECTIONS: Found ${ddSections.length} sections`);
-    ddSections.forEach((match, i) => {
-      console.log(`[${person_id}] DD_${i}: ${match[0]}`);
-    });
-    
+    const titleMatch = regularHtml.match(/<title[^>]*>([^<]*)<\/title>/i);
+    const pageTitle = titleMatch ? titleMatch[1] : null;
+    log.debug('page_title', { title: pageTitle });
+
+    if (isCloudflareChallenge(regularHtml)) {
+      log.warn('cloudflare_detected', {
+        title: pageTitle,
+        html_length: regularHtml.length,
+      });
+      await new Promise(resolve => setTimeout(resolve, 20000));
+      regularHtml = await page.content();
+      log.info('cloudflare_recheck', { html_length: regularHtml.length });
+      if (isCloudflareChallenge(regularHtml)) {
+        log.error('cloudflare_persistent', { html_length: regularHtml.length });
+        throw new Error('Cloudflare challenge not resolved');
+      }
+      log.info('cloudflare_resolved');
+    }
+
     // Extract name and club
     const nameMatch = regularHtml.match(/<h1 class="article__header__title-opener">Points: ([^<]+)<\/h1>/);
     const name = nameMatch?.[1]?.trim() || '';
-    console.log(`[${person_id}] NAME_EXTRACTION: Match=${!!nameMatch}, Value='${name}'`);
+    log.debug('name_extracted', { matched: !!nameMatch, name });
 
     let club = '';
     let clubId = '';
     const currentYear = new Date().getFullYear().toString();
-    
-    const clubRegex = year === currentYear 
+
+    const clubRegex = year === currentYear
       ? /<dd>Current Club: <a[^>]*href="\/clubpoints\/\?club_id=(\d+)[^"]*">([^<]+)<\/a>/
       : /<dd>Year End Club: <a[^>]*href="\/clubpoints\/\?club_id=(\d+)[^"]*">([^<]+)<\/a>/;
-    
+
     const clubMatch = regularHtml.match(clubRegex);
-    console.log(`[${person_id}] CLUB_EXTRACTION: Regex=${year === currentYear ? 'Current' : 'YearEnd'}, Match=${!!clubMatch}`);
+    log.debug('club_extracted', {
+      regex: year === currentYear ? 'current' : 'year_end',
+      matched: !!clubMatch,
+    });
     if (clubMatch?.[2]) {
       club = clubMatch[2].trim();
       clubId = clubMatch[1];
@@ -375,17 +403,13 @@ async function fetchRacerData(person_id, year, clubsFile, discipline = 'both') {
 
     const categoryMatch = regularHtml.match(/<dd>Category:\s*([^<]+)<\/dd>/);
     const category = categoryMatch?.[1]?.trim() || '';
-    console.log(`[${person_id}] CATEGORY_EXTRACTION: Match=${!!categoryMatch}, Value='${category}'`);
+    log.debug('category_extracted', { matched: !!categoryMatch, category });
 
-    console.log(`[${person_id}] EXTRACTED_DATA: Name='${name}', Club='${club}', Category='${category}'`);
-    
-    // Cyclocross fetching disabled
+    log.info('extracted_data', { name, club, club_id: clubId, category });
+
     let cyclocrossData = { raceCount: 0, totalPoints: 0, regionalPoints: 0, nationalPoints: 0 };
 
-    // Process points data
-    const regularData = processRegularPoints(regularHtml);
-    console.log(`[${person_id}] Regular data: ${JSON.stringify(regularData)}`);
-    // Cyclocross data removed
+    const regularData = processRegularPoints(regularHtml, log);
 
     // Update clubs cache
     if (club && clubId && clubsFile) {
@@ -401,7 +425,7 @@ async function fetchRacerData(person_id, year, clubsFile, discipline = 'both') {
         }
         fs.writeFileSync(clubsFile, JSON.stringify(clubs, null, 2), 'utf8');
       } catch (err) {
-        console.error(`Error updating clubs cache: ${err.message}`);
+        log.error('clubs_cache_update_failed', { err });
       }
     }
 
@@ -421,23 +445,32 @@ async function fetchRacerData(person_id, year, clubsFile, discipline = 'both') {
       roadRegionalPoints: regularData.regionalPoints,
       roadNationalPoints: regularData.nationalPoints,
       cxRegionalPoints: 0,
-      cxNationalPoints: 0
+      cxNationalPoints: 0,
     };
-    
+
     const duration = Date.now() - startTime;
-    console.log(`[${person_id}] PUPPETEER_END: success=true, duration=${duration}ms, points=${result.points}, races=${result.raceCount}`);
+    log.info('fetch_end', {
+      success: true,
+      duration_ms: duration,
+      points: result.points,
+      races: result.raceCount,
+    });
     return result;
   } catch (err) {
     const duration = Date.now() - startTime;
-    console.log(`[${person_id}] PUPPETEER_END: success=false, duration=${duration}ms, error="${err.message}"`);
+    log.error('fetch_end', {
+      success: false,
+      duration_ms: duration,
+      err,
+    });
     throw err;
   } finally {
     if (browser) {
       const closeStart = Date.now();
-      console.log(`[${person_id}] PUPPETEER_CLOSE: Starting browser close`);
+      log.debug('puppeteer_close_start');
       await browser.close();
       const closeDuration = Date.now() - closeStart;
-      console.log(`[${person_id}] PUPPETEER_CLOSED: Browser closed in ${closeDuration}ms`);
+      log.debug('puppeteer_closed', { duration_ms: closeDuration });
     }
   }
 }

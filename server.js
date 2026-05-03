@@ -7,10 +7,13 @@ const fetch = require('node-fetch');
 const puppeteer = require('puppeteer');
 const { fetchRacerData } = require('./services/racerDataService');
 const { fetchRacerData: fetchRacerDataAxios } = require('./services/axiosRacerService');
+const { logger } = require('./services/logger');
 const path = require('path');
 const fs = require('fs');
 // Firebase Admin SDK for server-side operations
 const admin = require('firebase-admin');
+
+const log = logger.child({ component: 'server' });
 
 // Firebase configuration
 const firebaseConfig = {
@@ -45,7 +48,7 @@ const verifyToken = async (req, res, next) => {
     req.user = decodedToken;
     next();
   } catch (error) {
-    console.error('Error verifying token:', error);
+    log.error('auth_token_invalid', { err: error });
     return res.status(403).json({ error: 'Forbidden: Invalid token' });
   }
 };
@@ -57,8 +60,11 @@ app.use(express.json()); // Add JSON body parser for POST requests
 // Middleware to log all non-GET requests
 app.use((req, res, next) => {
   if (req.method !== 'GET') {
-    const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] ${req.method} ${req.originalUrl} - Request body:`, JSON.stringify(req.body));
+    log.info('http_request', {
+      method: req.method,
+      path: req.originalUrl,
+      body: req.body,
+    });
   }
   next();
 });
@@ -73,21 +79,21 @@ const CACHE_DIR = process.env.NODE_ENV === 'production'
 // Create cache directory if it doesn't exist
 if (!fs.existsSync(CACHE_DIR)) {
   fs.mkdirSync(CACHE_DIR, { recursive: true });
-  console.log(`Created cache directory: ${CACHE_DIR}`);
+  log.info('cache_dir_created', { dir: CACHE_DIR });
 }
 
 // Configure racers directory
 const RACERS_DIR = path.join(CACHE_DIR, 'racers');
 if (!fs.existsSync(RACERS_DIR)) {
   fs.mkdirSync(RACERS_DIR, { recursive: true });
-  console.log(`Created racers directory: ${RACERS_DIR}`);
+  log.info('racers_dir_created', { dir: RACERS_DIR });
 }
 
 // Configure clubs directory
 const CLUBS_DIR = path.join(CACHE_DIR, 'clubs');
 if (!fs.existsSync(CLUBS_DIR)) {
   fs.mkdirSync(CLUBS_DIR, { recursive: true });
-  console.log(`Created clubs directory: ${CLUBS_DIR}`);
+  log.info('clubs_dir_created', { dir: CLUBS_DIR });
 }
 const CLUBS_FILE = path.join(CLUBS_DIR, 'clubs.json');
 
@@ -107,11 +113,10 @@ function loadRacers() {
     if (fs.existsSync(RACERS_FILE)) {
       const data = fs.readFileSync(RACERS_FILE, 'utf8');
       racers = JSON.parse(data);
-      console.log(`Loaded ${racers.length} racers from ${RACERS_FILE}`);
+      log.info('racers_loaded', { count: racers.length, path: RACERS_FILE });
     }
   } catch (err) {
-    console.error(`Error loading racers: ${err.message}`);
-    // Fallback to empty array if there's an error
+    log.error('racers_load_failed', { err, path: RACERS_FILE });
     racers = [];
   }
 }
@@ -135,9 +140,12 @@ app.get('/api/race-data', async (req, res) => {
 
   // Check memory cache first
   if (cache[cacheKey]) {
-    // Previous years never expire, current year uses TTL
     if (isPreviousYear || now - cache[cacheKey].timestamp < CACHE_TTL_MS) {
-      console.log(`Memory cache HIT for ${cacheKey}${isPreviousYear ? ' (previous year - never expires)' : ''}`);
+      log.info('cache_hit', {
+        source: 'memory',
+        cache_key: cacheKey,
+        previous_year: isPreviousYear,
+      });
       return res.json(cache[cacheKey].data);
     }
   }
@@ -148,20 +156,24 @@ app.get('/api/race-data', async (req, res) => {
       const fileContent = fs.readFileSync(cacheFilePath, 'utf8');
       const cacheEntry = JSON.parse(fileContent);
 
-      // When running locally, always use cache if it exists
-      // In production, previous years never expire, current year uses TTL
+      // Locally always serve disk cache; in production previous years never
+      // expire and current year uses TTL.
       if (process.env.NODE_ENV !== 'production' || isPreviousYear || now - cacheEntry.timestamp < CACHE_TTL_MS) {
-        console.log(`Disk cache HIT for ${cacheKey}${process.env.NODE_ENV !== 'production' ? ' (local environment - always using cache)' : isPreviousYear ? ' (previous year - never expires)' : ''}`);
-        // Update memory cache
+        log.info('cache_hit', {
+          source: 'disk',
+          cache_key: cacheKey,
+          previous_year: isPreviousYear,
+          local_dev: process.env.NODE_ENV !== 'production',
+        });
         cache[cacheKey] = cacheEntry;
         return res.json(cacheEntry.data);
       }
     } catch (err) {
-      console.error(`Error reading cache file ${cacheFilePath}:`, err.message);
+      log.error('cache_read_failed', { err, path: cacheFilePath });
     }
   }
 
-  console.log(`Cache MISS for ${cacheKey}. Cache duration: ${cacheDurationMinutes} minutes`);
+  log.info('cache_miss', { cache_key: cacheKey, ttl_minutes: cacheDurationMinutes });
 
   try {
     const result = await fetchRacerDataWrapper(person_id, year, 'road-track');
@@ -173,27 +185,27 @@ app.get('/api/race-data', async (req, res) => {
     // Write to disk cache
     fs.writeFile(cacheFilePath, JSON.stringify(cacheEntry), 'utf8', (err) => {
       if (err) {
-        console.error(`Error writing cache file ${cacheFilePath}:`, err.message);
+        log.error('cache_write_failed', { err, path: cacheFilePath });
       }
     });
 
     res.json(result);
   } catch (err) {
     if (err.message.includes('500 error')) {
-      console.error(`BC API server error (500) when fetching data for ${person_id}_${year}: ${err.message}`);
+      log.error('bc_api_500', { err, person_id, year });
     } else {
-      console.error("Error fetching or parsing race data:", err.message);
+      log.error('race_data_fetch_failed', { err, person_id, year });
     }
 
-    // If it's not a 500 error and we have a cached version, return that instead
+    // Fall back to stale cache for non-500 errors.
     if (!err.message.includes('500 error') && fs.existsSync(cacheFilePath)) {
       try {
         const fileContent = fs.readFileSync(cacheFilePath, 'utf8');
         const cacheEntry = JSON.parse(fileContent);
-        console.log(`Using cached data for ${cacheKey} due to non-500 error`);
+        log.warn('cache_stale_served', { cache_key: cacheKey, reason: err.message });
         return res.json(cacheEntry.data);
       } catch (cacheErr) {
-        console.error(`Error reading cache during error recovery:`, cacheErr.message);
+        log.error('cache_recovery_read_failed', { err: cacheErr, path: cacheFilePath });
       }
     }
 
@@ -223,7 +235,7 @@ app.post('/api/racers', verifyToken, (req, res) => {
 
     res.json({ success: true, count: racers.length });
   } catch (err) {
-    console.error(`Error updating racers: ${err.message}`);
+    log.error('racers_update_failed', { err });
     res.status(500).send("Failed to update racers list");
   }
 });
@@ -250,7 +262,7 @@ app.post('/api/racers/add', verifyToken, (req, res) => {
 
     res.json({ success: true, bc, count: racers.length });
   } catch (err) {
-    console.error(`Error adding racer: ${err.message}`);
+    log.error('racer_add_failed', { err });
     res.status(500).json({ message: "Failed to add racer" });
   }
 });
@@ -277,7 +289,7 @@ app.delete('/api/racers/:bc', verifyToken, (req, res) => {
 
     res.json({ success: true, bc, count: racers.length });
   } catch (err) {
-    console.error(`Error removing racer: ${err.message}`);
+    log.error('racer_remove_failed', { err });
     res.status(500).json({ message: "Failed to remove racer" });
   }
 });
@@ -340,7 +352,7 @@ app.post('/api/build-cache', verifyToken, async (req, res) => {
             fs.writeFileSync(RACERS_FILE, JSON.stringify(racers, null, 2), 'utf8');
           }
         } catch (writeErr) {
-          console.error(`Error updating racers file with name for ${racerId}:`, writeErr.message);
+          log.error('racers_file_name_update_failed', { err: writeErr, racer_id: racerId });
         }
       } catch (err) {
         results.failed++;
@@ -350,7 +362,7 @@ app.post('/api/build-cache', verifyToken, async (req, res) => {
           status: 'failed',
           error: err.message
         });
-        console.error(`Error building cache for ${racerId}_${year}:`, err.message);
+        log.error('cache_build_failed', { err, racer_id: racerId, year });
       }
     } else {
       // Process each racer and build cache
@@ -384,7 +396,7 @@ app.post('/api/build-cache', verifyToken, async (req, res) => {
               fs.writeFileSync(RACERS_FILE, JSON.stringify(racers, null, 2), 'utf8');
             }
           } catch (writeErr) {
-            console.error(`Error updating racers file with name for ${racerId}:`, writeErr.message);
+            log.error('racers_file_name_update_failed', { err: writeErr, racer_id: racerId });
           }
         } catch (err) {
           results.failed++;
@@ -394,14 +406,14 @@ app.post('/api/build-cache', verifyToken, async (req, res) => {
             status: 'failed',
             error: err.message
           });
-          console.error(`Error building cache for ${racerId}_${year}:`, err.message);
+          log.error('cache_build_failed', { err, racer_id: racerId, year });
         }
       }
     }
 
     res.json(results);
   } catch (err) {
-    console.error("Error building cache:", err.message);
+    log.error('cache_build_batch_failed', { err, year });
     res.status(500).send("Failed to build cache");
   }
 });
@@ -435,16 +447,12 @@ app.get('/api/all-race-data', async (req, res) => {
           const fileContent = fs.readFileSync(cacheFilePath, 'utf8');
           cacheEntry = JSON.parse(fileContent);
         } catch (err) {
-          console.error(`Error reading cache file ${cacheFilePath}:`, err.message);
+          log.error('cache_read_failed', { err, path: cacheFilePath });
         }
       }
-      
-      // No alternative disciplines; only road-track supported
 
-      // Process cache entry if found
       if (cacheEntry) {
-        console.log(`Cache HIT for ${cacheKey}`);
-        // Update memory cache if it was loaded from disk
+        log.debug('cache_hit', { cache_key: cacheKey, source: cache[cacheKey] ? 'memory' : 'disk' });
         if (!cache[cacheKey]) {
           cache[cacheKey] = cacheEntry;
         }
@@ -452,8 +460,7 @@ app.get('/api/all-race-data', async (req, res) => {
           ...cacheEntry.data
         };
       } else {
-        // No cache available for any discipline
-        console.log(`No cache available for ${racerId}_${year} (road-track only)`);
+        log.debug('cache_missing', { racer_id: racerId, year });
         missingData.push(racerId);
         
         // Add empty result for racers with no cache
@@ -474,7 +481,7 @@ app.get('/api/all-race-data', async (req, res) => {
 
     res.json(results);
   } catch (err) {
-    console.error("Error fetching cached race data:", err.message);
+    log.error('all_race_data_failed', { err });
     res.status(500).send("Failed to fetch race data");
   }
 });
@@ -504,7 +511,7 @@ app.get('/api/cache/:year', (req, res) => {
         const cacheEntry = JSON.parse(fileContent);
         timestamp = cacheEntry.timestamp;
       } catch (readErr) {
-        console.error(`Error reading timestamp from ${file}:`, readErr.message);
+        log.error('cache_timestamp_read_failed', { err: readErr, file });
       }
 
       return {
@@ -520,7 +527,7 @@ app.get('/api/cache/:year', (req, res) => {
       files: result
     });
   } catch (err) {
-    console.error(`Error listing cache files for year ${year}:`, err.message);
+    log.error('cache_list_failed', { err, year });
     res.status(500).send(`Failed to list cache files for year ${year}`);
   }
 });
@@ -566,7 +573,7 @@ app.delete('/api/cache/:year', verifyToken, (req, res) => {
       errors: errors.length > 0 ? errors : undefined
     });
   } catch (err) {
-    console.error(`Error removing cache files for year ${year}:`, err.message);
+    log.error('cache_delete_failed', { err, year });
     res.status(500).send(`Failed to remove cache files for year ${year}`);
   }
 });
@@ -584,7 +591,7 @@ app.get('/api/clubs', (req, res) => {
       res.json([]);
     }
   } catch (err) {
-    console.error(`Error fetching club names: ${err.message}`);
+    log.error('clubs_fetch_failed', { err });
     res.status(500).send("Failed to fetch club names");
   }
 });
@@ -601,7 +608,7 @@ app.get('/api/clubs-file', (req, res) => {
       res.json({});
     }
   } catch (err) {
-    console.error(`Error fetching clubs file: ${err.message}`);
+    log.error('clubs_file_fetch_failed', { err });
     res.status(500).send("Failed to fetch clubs file");
   }
 });
@@ -641,7 +648,7 @@ app.delete('/api/clubs/:clubName', verifyToken, (req, res) => {
       remainingClubs: Object.keys(clubs).length
     });
   } catch (err) {
-    console.error(`Error removing club: ${err.message}`);
+    log.error('club_remove_failed', { err });
     res.status(500).json({ success: false, message: "Failed to remove club" });
   }
 });
@@ -657,5 +664,9 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`App running in ${process.env.NODE_ENV || 'development'} mode on http://localhost:${PORT}`);
+  log.info('server_started', {
+    port: PORT,
+    node_env: process.env.NODE_ENV || 'development',
+    url: `http://localhost:${PORT}`,
+  });
 });
