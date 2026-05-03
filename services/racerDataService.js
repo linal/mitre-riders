@@ -311,14 +311,32 @@ async function fetchRacerData(person_id, year, clubsFile, discipline = 'both') {
       const bodyContent = bodyStart !== -1 ? regularHtml.substring(bodyStart, bodyStart + 1000) : 'Body not found';
       console.log(`[${person_id}] BODY_START: ${bodyContent.replace(/\n/g, ' ').replace(/\s+/g, ' ')}`);
       
-      if (regularHtml.includes('Just a moment') || regularHtml.includes('cloudflare')) {
+    // Only treat the page as a Cloudflare challenge when we see strong, unambiguous
+    // markers. Substrings like "cloudflare" alone produce false positives because the
+    // real British Cycling page references Cloudflare-hosted assets and third-party
+    // domains. We instead look for the challenge title, the challenge form, or the
+    // managed-challenge script tokens that only appear on interstitial pages.
+    const isCloudflareChallenge = (html) => {
+      const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i);
+      const title = titleMatch ? titleMatch[1].trim() : '';
+      if (/^Just a moment/i.test(title)) return true;
+      if (/^Attention Required/i.test(title)) return true;
+      if (html.includes('id="challenge-form"')) return true;
+      if (html.includes('cf-browser-verification')) return true;
+      if (html.includes('cf-challenge-running')) return true;
+      if (html.includes('window._cf_chl_opt')) return true;
+      if (html.includes('Checking your browser before accessing')) return true;
+      return false;
+    };
+
+    if (isCloudflareChallenge(regularHtml)) {
       console.log(`[${person_id}] CLOUDFLARE_DETECTED: Challenge page detected`);
       const cfContent = regularHtml.substring(0, 2000).replace(/\n/g, ' ').replace(/\s+/g, ' ');
       console.log(`[${person_id}] CLOUDFLARE_HTML: ${cfContent}`);
       await new Promise(resolve => setTimeout(resolve, 20000));
       regularHtml = await page.content();
       console.log(`[${person_id}] After wait, regular HTML length: ${regularHtml.length}`);
-      if (regularHtml.includes('Just a moment') || regularHtml.includes('cloudflare')) {
+      if (isCloudflareChallenge(regularHtml)) {
         console.log(`[${person_id}] CLOUDFLARE_PERSISTENT: Challenge not resolved`);
         throw new Error('Cloudflare challenge not resolved');
       }
