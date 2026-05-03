@@ -223,6 +223,7 @@ export default function ClubSummary() {
                   darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white'
                 }`}
               >
+                <option value="2026">2026</option>
                 <option value="2025">2025</option>
                 <option value="2024">2024</option>
                 <option value="2023">2023</option>

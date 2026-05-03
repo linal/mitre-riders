@@ -9,7 +9,7 @@ export default function ClubRiders() {
   const { clubName } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const { darkMode, toggleDarkMode } = useContext(ThemeContext);
-  const [year, setYear] = useState(searchParams.get("year") || "2025");
+  const [year, setYear] = useState(searchParams.get("year") || "2026");
   const [data, setData] = useState({});
   const [loading, setLoading] = useState(true);
   const [sortKey, setSortKey] = useState(searchParams.get("sort") || "name");
@@ -47,7 +47,7 @@ export default function ClubRiders() {
     
     // Update URL params
     const params = new URLSearchParams();
-    if (year !== "2025") {
+    if (year !== "2026") {
       params.set("year", year);
     }
     setSearchParams(params);
@@ -56,7 +56,7 @@ export default function ClubRiders() {
   // Update URL when filters change
   useEffect(() => {
     const params = new URLSearchParams();
-    if (year !== "2025") params.set("year", year);
+    if (year !== "2026") params.set("year", year);
     if (sortKey !== "name") params.set("sort", sortKey);
     if (filterText) params.set("filter", filterText);
     // raceTypeFilter removed

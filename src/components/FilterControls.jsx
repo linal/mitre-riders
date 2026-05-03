@@ -38,7 +38,7 @@ export default function FilterControls({
               className={`border rounded px-2 py-1.5 text-sm w-full ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white border-gray-300'}`}
             >
               {[...Array(10)].map((_, i) => {
-                const y = 2025 - i;
+                const y = 2026 - i;
                 return <option key={y} value={y}>{y}</option>;
               })}
             </select>
