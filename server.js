@@ -82,6 +82,51 @@ if (!fs.existsSync(CACHE_DIR)) {
   log.info('cache_dir_created', { dir: CACHE_DIR });
 }
 
+// Probe the cache directory at boot so we know up-front whether it's
+// writable and how many cached files survived the previous run. This is
+// critical when running in containers where volumes may not be mounted.
+function probeCacheDir() {
+  try {
+    const stat = fs.statSync(CACHE_DIR);
+    let writable = false;
+    try {
+      fs.accessSync(CACHE_DIR, fs.constants.W_OK);
+      writable = true;
+    } catch (_e) {
+      writable = false;
+    }
+    const entries = fs.readdirSync(CACHE_DIR);
+    const cacheFiles = entries.filter(f => f.endsWith('.json'));
+    let totalBytes = 0;
+    for (const f of cacheFiles) {
+      try {
+        totalBytes += fs.statSync(path.join(CACHE_DIR, f)).size;
+      } catch (_e) {
+        // ignore individual file stat failures
+      }
+    }
+    log.info('cache_dir_status', {
+      dir: CACHE_DIR,
+      exists: true,
+      is_directory: stat.isDirectory(),
+      writable,
+      mode: '0' + (stat.mode & 0o777).toString(8),
+      file_count: cacheFiles.length,
+      total_bytes: totalBytes,
+      mtime: stat.mtime.toISOString(),
+    });
+    if (!writable) {
+      log.error('cache_dir_not_writable', {
+        dir: CACHE_DIR,
+        hint: 'cache writes will fail; check volume mount / file permissions',
+      });
+    }
+  } catch (err) {
+    log.error('cache_dir_probe_failed', { dir: CACHE_DIR, err });
+  }
+}
+probeCacheDir();
+
 // Configure racers directory
 const RACERS_DIR = path.join(CACHE_DIR, 'racers');
 if (!fs.existsSync(RACERS_DIR)) {
@@ -394,9 +439,32 @@ async function buildCacheForRacer(racer, year, opts) {
     };
   }
 
+  // writeFileSync doesn't actually prove the file landed on disk in a
+  // container with an unmounted volume - the kernel can happily write to
+  // an ephemeral overlay that disappears on restart. Stat the file
+  // afterwards and compare sizes so any discrepancy is loud.
+  let bytesOnDisk = null;
+  try {
+    const stat = fs.statSync(cacheFilePath);
+    bytesOnDisk = stat.size;
+    if (bytesOnDisk !== bytesWritten) {
+      attemptLog.warn('cache_disk_size_mismatch', {
+        bytes_written: bytesWritten,
+        bytes_on_disk: bytesOnDisk,
+      });
+    }
+  } catch (statErr) {
+    attemptLog.error('cache_disk_verify_failed', {
+      err: statErr,
+      hint: 'write reported success but file does not exist - check volume mount',
+    });
+  }
+
   attemptLog.info('cache_built', {
     duration_ms: Date.now() - attemptStart,
     bytes_written: bytesWritten,
+    bytes_on_disk: bytesOnDisk,
+    persisted: bytesOnDisk !== null,
     timestamp: cacheEntry.timestamp,
     name: result.name,
     points: result.points,
@@ -450,11 +518,31 @@ app.post('/api/build-cache', verifyToken, async (req, res) => {
     details: [],
   };
 
+  // Snapshot the cache directory so we can report what actually changed
+  // on disk during this batch. If 'cached' counts go up but the on-disk
+  // file count stays flat, we know the volume isn't being persisted.
+  const snapshotCacheDir = () => {
+    try {
+      const files = fs.readdirSync(CACHE_DIR).filter(f => f.endsWith('.json'));
+      let totalBytes = 0;
+      for (const f of files) {
+        try { totalBytes += fs.statSync(path.join(CACHE_DIR, f)).size; } catch (_e) { /* ignore */ }
+      }
+      return { file_count: files.length, total_bytes: totalBytes };
+    } catch (err) {
+      return { file_count: null, total_bytes: null, error: err.message };
+    }
+  };
+
+  const before = snapshotCacheDir();
   log.info('cache_build_batch_start', {
     total_racers: targets.length,
     year,
     scope: racerId ? 'single' : 'all',
     target_racer_id: racerId || null,
+    cache_dir: CACHE_DIR,
+    cache_dir_files_before: before.file_count,
+    cache_dir_bytes_before: before.total_bytes,
   });
 
   const batchStart = Date.now();
@@ -474,6 +562,7 @@ app.post('/api/build-cache', verifyToken, async (req, res) => {
       results.details.push(outcome.detail);
     }
 
+    const after = snapshotCacheDir();
     log.info('cache_build_batch_done', {
       duration_ms: Date.now() - batchStart,
       total_racers: results.totalRacers,
@@ -481,7 +570,32 @@ app.post('/api/build-cache', verifyToken, async (req, res) => {
       failed: results.failed,
       skipped: results.skipped,
       year,
+      cache_dir_files_before: before.file_count,
+      cache_dir_files_after: after.file_count,
+      cache_dir_files_delta: after.file_count != null && before.file_count != null
+        ? after.file_count - before.file_count
+        : null,
+      cache_dir_bytes_after: after.total_bytes,
     });
+
+    // If we reported N successful cache writes but the on-disk file count
+    // didn't change by N (allowing for overwrites of existing files),
+    // something is eating our writes. Surface that clearly.
+    if (
+      results.cached > 0 &&
+      after.file_count != null &&
+      before.file_count != null &&
+      after.file_count === before.file_count &&
+      before.file_count === 0
+    ) {
+      log.error('cache_writes_not_persisted', {
+        reported_cached: results.cached,
+        file_count_before: before.file_count,
+        file_count_after: after.file_count,
+        cache_dir: CACHE_DIR,
+        hint: 'writes claimed success but no files appeared on disk - volume likely not mounted',
+      });
+    }
 
     res.json(results);
   } catch (err) {

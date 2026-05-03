@@ -51,15 +51,32 @@ function processRegularPoints(html, log = logger) {
   let regionalPoints = 0;
   let nationalPoints = 0;
 
+  // Diagnostic counters - we surface these on the final summary so any
+  // mismatch between rows-found and points-classified is immediately
+  // visible without enabling debug-level logging.
+  let rowsParsed = 0;
+  let rowsWithFewCells = 0;
+  let rowsClassified = 0;
+
   const tbodyStart = html.indexOf('<tbody>');
   const tbodyEnd = html.indexOf('</tbody>');
+  const tbodyFound = tbodyStart !== -1 && tbodyEnd !== -1;
   log.debug('process_regular_tbody', {
-    tbody_found: tbodyStart !== -1 && tbodyEnd !== -1,
+    tbody_found: tbodyFound,
     tbody_start: tbodyStart,
     tbody_end: tbodyEnd,
   });
 
-  if (tbodyStart !== -1 && tbodyEnd !== -1) {
+  if (!tbodyFound && html.length > 50000) {
+    // A real BC points page is ~430KB and always has a tbody; a missing
+    // tbody on a real-size page means the layout changed.
+    log.warn('process_regular_no_tbody', {
+      html_length: html.length,
+      hint: 'page is full-size but contains no <tbody> - markup may have changed',
+    });
+  }
+
+  if (tbodyFound) {
     const tbody = html.slice(tbodyStart, tbodyEnd);
     const eventIdMatches = [...tbody.matchAll(/\/events\/details\/(\d+)\//g)];
     const uniqueEventIds = new Set(eventIdMatches.map(match => match[1]));
@@ -70,7 +87,8 @@ function processRegularPoints(html, log = logger) {
     });
 
     const rows = tbody.split('<tr>');
-    log.debug('process_regular_rows', { row_count: rows.length - 1 });
+    rowsParsed = Math.max(0, rows.length - 1);
+    log.debug('process_regular_rows', { row_count: rowsParsed });
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
       const cells = row.split('<td>');
@@ -88,7 +106,10 @@ function processRegularPoints(html, log = logger) {
           } else {
             regionalPoints += points;
           }
+          rowsClassified++;
         }
+      } else {
+        rowsWithFewCells++;
       }
     }
   }
@@ -109,11 +130,44 @@ function processRegularPoints(html, log = logger) {
     }
   }
 
+  // Internal consistency checks. These catch silent HTML-layout regressions
+  // where the page parses fine and the tfoot total comes out, but per-row
+  // extraction returns nothing.
+  if (totalPoints > 0 && raceCount === 0) {
+    log.warn('process_regular_total_without_races', {
+      total_points: totalPoints,
+      race_count: raceCount,
+      tbody_length: tbodyFound ? tbodyEnd - tbodyStart : 0,
+      hint: 'tfoot reports points but tbody yielded no event ids - regex /events/details/<id>/ may be stale',
+    });
+  }
+  if (totalPoints > 0 && regionalPoints + nationalPoints === 0) {
+    log.warn('process_regular_unclassified_points', {
+      total_points: totalPoints,
+      regional_points: regionalPoints,
+      national_points: nationalPoints,
+      rows_parsed: rowsParsed,
+      rows_with_few_cells: rowsWithFewCells,
+      rows_classified: rowsClassified,
+      hint: 'tfoot total > 0 but no row was classified - <td> split likely needs to handle <td class="...">',
+    });
+  }
+  if (rowsParsed > 0 && rowsClassified === 0) {
+    log.warn('process_regular_no_rows_classified', {
+      rows_parsed: rowsParsed,
+      rows_with_few_cells: rowsWithFewCells,
+      hint: 'rows present in tbody but none had >=6 <td> cells - markup may use attributes on <td>',
+    });
+  }
+
   log.info('process_regular_done', {
     races: raceCount,
     total_points: totalPoints,
     regional_points: regionalPoints,
     national_points: nationalPoints,
+    rows_parsed: rowsParsed,
+    rows_classified: rowsClassified,
+    rows_with_few_cells: rowsWithFewCells,
   });
   return { raceCount, totalPoints, regionalPoints, nationalPoints };
 }
