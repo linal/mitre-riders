@@ -155,7 +155,6 @@ routes:
             - calculateSummary(response) -> setPrevYearSummary
     behaviors:
       - Toggle year-over-year comparison visibility
-      - Refresh button triggers both current and previous year fetches
       - All aggregations are computed client-side then rendered
     ui:
       navigation:
