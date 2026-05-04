@@ -99,4 +99,30 @@ class Logger {
 
 const logger = new Logger();
 
-module.exports = { logger, Logger, LEVELS };
+// Classify an error into a small, stable set of categories so an LLM
+// reading aggregate logs can group failures without parsing stack traces.
+// Add new buckets sparingly - the value is in keeping the set narrow.
+function classifyError(err) {
+  const message = (err && (err.message || String(err))) || '';
+  if (/Cloudflare/i.test(message)) return 'cloudflare_challenge';
+  if (/Browser launch/i.test(message)) return 'browser_launch_failed';
+  if (/(goto|navigation|page).*timeout/i.test(message)) return 'page_navigation_timeout';
+  if (/timeout/i.test(message)) return 'timeout';
+  if (/ENOTFOUND|EAI_AGAIN|getaddrinfo/i.test(message)) return 'dns_failure';
+  if (/ECONNREFUSED|ECONNRESET|EHOSTUNREACH|EPIPE|socket hang up/i.test(message)) return 'network_error';
+  if (/403|Forbidden/i.test(message)) return 'http_forbidden';
+  if (/500/.test(message)) return 'http_500';
+  if (/blocked|Just a moment/i.test(message)) return 'request_blocked';
+  if (/ENOSPC|EACCES|EPERM|EROFS/i.test(message)) return 'storage_error';
+  return 'unknown';
+}
+
+// Short collision-resistant id for correlating a batch of related log
+// lines (one cache rebuild, one HTTP request, etc.).
+function randomId(prefix = '') {
+  const ts = Date.now().toString(36);
+  const rnd = Math.random().toString(36).slice(2, 8);
+  return prefix ? `${prefix}_${ts}${rnd}` : `${ts}${rnd}`;
+}
+
+module.exports = { logger, Logger, LEVELS, classifyError, randomId };

@@ -160,6 +160,23 @@ function processRegularPoints(html, log = logger) {
     });
   }
 
+  // Aggregate parse diagnostics. We pass these back to the caller so the
+  // server-side cache_attempt_summary can include them on the same line as
+  // the extracted values - an LLM reading the summary then has the full
+  // context for "why does this rider have suspicious-looking data?" without
+  // needing to correlate separate log lines.
+  const parseDiagnostics = {
+    tbody_found: tbodyFound,
+    rows_parsed: rowsParsed,
+    rows_classified: rowsClassified,
+    rows_with_few_cells: rowsWithFewCells,
+    warnings: [],
+  };
+  if (!tbodyFound && html.length > 50000) parseDiagnostics.warnings.push('no_tbody_on_full_page');
+  if (totalPoints > 0 && raceCount === 0) parseDiagnostics.warnings.push('total_without_races');
+  if (totalPoints > 0 && regionalPoints + nationalPoints === 0) parseDiagnostics.warnings.push('unclassified_points');
+  if (rowsParsed > 0 && rowsClassified === 0) parseDiagnostics.warnings.push('no_rows_classified');
+
   log.info('process_regular_done', {
     races: raceCount,
     total_points: totalPoints,
@@ -168,8 +185,15 @@ function processRegularPoints(html, log = logger) {
     rows_parsed: rowsParsed,
     rows_classified: rowsClassified,
     rows_with_few_cells: rowsWithFewCells,
+    parse_warnings: parseDiagnostics.warnings,
   });
-  return { raceCount, totalPoints, regionalPoints, nationalPoints };
+  return {
+    raceCount,
+    totalPoints,
+    regionalPoints,
+    nationalPoints,
+    parseDiagnostics,
+  };
 }
 
 // Helper function to process cyclocross points from HTML
@@ -417,7 +441,10 @@ async function fetchRacerData(person_id, year, clubsFile, discipline = 'both') {
     const pageTitle = titleMatch ? titleMatch[1] : null;
     log.debug('page_title', { title: pageTitle });
 
+    let cloudflareSeen = false;
+    let cloudflareResolved = false;
     if (isCloudflareChallenge(regularHtml)) {
+      cloudflareSeen = true;
       log.warn('cloudflare_detected', {
         title: pageTitle,
         html_length: regularHtml.length,
@@ -429,6 +456,7 @@ async function fetchRacerData(person_id, year, clubsFile, discipline = 'both') {
         log.error('cloudflare_persistent', { html_length: regularHtml.length });
         throw new Error('Cloudflare challenge not resolved');
       }
+      cloudflareResolved = true;
       log.info('cloudflare_resolved');
     }
 
@@ -500,6 +528,19 @@ async function fetchRacerData(person_id, year, clubsFile, discipline = 'both') {
       roadNationalPoints: regularData.nationalPoints,
       cxRegionalPoints: 0,
       cxNationalPoints: 0,
+      // Non-persisted diagnostics: stripped before writing to disk by the
+      // caller. Lets the cache_attempt_summary record what happened during
+      // the fetch on a single line.
+      _diagnostics: {
+        html_length: regularHtml.length,
+        page_title: pageTitle,
+        cloudflare_seen: cloudflareSeen,
+        cloudflare_resolved: cloudflareResolved,
+        name_extracted: !!name,
+        club_extracted: !!club,
+        category_extracted: !!category,
+        parse: regularData.parseDiagnostics || null,
+      },
     };
 
     const duration = Date.now() - startTime;
@@ -508,6 +549,10 @@ async function fetchRacerData(person_id, year, clubsFile, discipline = 'both') {
       duration_ms: duration,
       points: result.points,
       races: result.raceCount,
+      cloudflare_seen: cloudflareSeen,
+      parse_warnings: regularData.parseDiagnostics
+        ? regularData.parseDiagnostics.warnings
+        : [],
     });
     return result;
   } catch (err) {
