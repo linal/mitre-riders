@@ -76,22 +76,47 @@ function processRegularPoints(html, log = logger) {
     });
   }
 
+  // Capture which event-id pattern actually produced matches so the log
+  // tells us which BC URL shape is currently in use.
+  let eventIdPatternUsed = null;
+  let tbodySnapshot = '';
   if (tbodyFound) {
     const tbody = html.slice(tbodyStart, tbodyEnd);
-    const eventIdMatches = [...tbody.matchAll(/\/events\/details\/(\d+)\//g)];
+    tbodySnapshot = tbody;
+
+    // Try multiple patterns - BC has historically used
+    // /events/details/<id>/ but newer markup uses /events/<id>/<slug>/.
+    // Whichever returns matches first wins.
+    const eventIdPatterns = [
+      { name: 'events_details_id', re: /\/events\/details\/(\d+)\//g },
+      { name: 'events_id', re: /\/events\/(\d+)(?:\/|\b)/g },
+    ];
+    let eventIdMatches = [];
+    for (const pat of eventIdPatterns) {
+      const matches = [...tbody.matchAll(pat.re)];
+      if (matches.length > 0) {
+        eventIdMatches = matches;
+        eventIdPatternUsed = pat.name;
+        break;
+      }
+    }
     const uniqueEventIds = new Set(eventIdMatches.map(match => match[1]));
     raceCount = uniqueEventIds.size;
     log.debug('process_regular_events', {
       event_matches: eventIdMatches.length,
       unique_races: raceCount,
+      pattern_used: eventIdPatternUsed,
     });
 
-    const rows = tbody.split('<tr>');
+    const rows = tbody.split(/<tr\b[^>]*>/);
     rowsParsed = Math.max(0, rows.length - 1);
     log.debug('process_regular_rows', { row_count: rowsParsed });
+    // Permissive cell split: handles <td>, <td class="..">, <td colspan="..">,
+    // and any other attribute-bearing variant the BC site might emit.
+    const cellSplitter = /<td\b[^>]*>/;
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
-      const cells = row.split('<td>');
+      const cells = row.split(cellSplitter);
 
       if (cells.length >= 6) {
         const categoryCell = cells[2];
@@ -112,17 +137,28 @@ function processRegularPoints(html, log = logger) {
         rowsWithFewCells++;
       }
     }
+
+    // If the URL-pattern probes failed but we DID classify rows, treat each
+    // valid data row as a race. More robust to URL format churn than the
+    // event-id regex alone.
+    if (raceCount === 0 && rowsClassified > 0) {
+      raceCount = rowsClassified;
+      eventIdPatternUsed = 'row_count_fallback';
+    }
   }
 
   const tfootStart = html.indexOf('<tfoot>');
   log.debug('process_regular_tfoot', { tfoot_found: tfootStart !== -1 });
   if (tfootStart !== -1) {
-    let pos = html.indexOf('<td>', tfootStart);
+    // Same permissive treatment for tfoot - the total cell may also carry
+    // attributes (e.g. <td class="total">).
+    let pos = html.indexOf('<td', tfootStart);
     for (let i = 0; i < 4 && pos !== -1; i++) {
-      pos = html.indexOf('<td>', pos + 1);
+      pos = html.indexOf('<td', pos + 1);
     }
     if (pos !== -1) {
-      const start = pos + 4;
+      const tagEnd = html.indexOf('>', pos);
+      const start = tagEnd === -1 ? pos + 4 : tagEnd + 1;
       const end = html.indexOf('</td>', start);
       const value = html.slice(start, end).trim();
       totalPoints = isNaN(Number(value)) ? 0 : Number(value);
@@ -167,15 +203,49 @@ function processRegularPoints(html, log = logger) {
   // needing to correlate separate log lines.
   const parseDiagnostics = {
     tbody_found: tbodyFound,
+    tbody_length: tbodyFound ? tbodyEnd - tbodyStart : 0,
     rows_parsed: rowsParsed,
     rows_classified: rowsClassified,
     rows_with_few_cells: rowsWithFewCells,
+    event_id_pattern_used: eventIdPatternUsed,
     warnings: [],
   };
   if (!tbodyFound && html.length > 50000) parseDiagnostics.warnings.push('no_tbody_on_full_page');
   if (totalPoints > 0 && raceCount === 0) parseDiagnostics.warnings.push('total_without_races');
   if (totalPoints > 0 && regionalPoints + nationalPoints === 0) parseDiagnostics.warnings.push('unclassified_points');
   if (rowsParsed > 0 && rowsClassified === 0) parseDiagnostics.warnings.push('no_rows_classified');
+
+  // When the parser fires warnings, dump a truncated sample of the actual
+  // tbody markup into the log so a future LLM/human can derive the new
+  // regex from the log alone - no need to retrieve a debug HTML file off
+  // the server. Capped to keep log lines manageable; we also snapshot a
+  // single representative row when possible.
+  if (parseDiagnostics.warnings.length > 0 && tbodyFound) {
+    const SAMPLE_CAP = 4000;
+    const tbodyTruncated = parseDiagnostics.tbody_length > SAMPLE_CAP;
+    const tbodySample = tbodySnapshot.slice(0, SAMPLE_CAP);
+
+    // Pull the first <tr>...</tr> we can find as a representative row -
+    // usually enough to see the new <td class="..."> shape and the link
+    // format used for events.
+    let rowSample = null;
+    const trMatch = tbodySnapshot.match(/<tr\b[^>]*>[\s\S]*?<\/tr>/);
+    if (trMatch) {
+      rowSample = trMatch[0].slice(0, 1500);
+    }
+
+    log.warn('process_regular_html_sample', {
+      description:
+        'Parse warnings fired; logging a tbody sample so the regexes can be ' +
+        'updated from the log alone. Examine `row_sample` for the current ' +
+        '<td>/<a> markup shape.',
+      parse_warnings: parseDiagnostics.warnings,
+      tbody_length: parseDiagnostics.tbody_length,
+      tbody_sample_truncated: tbodyTruncated,
+      tbody_sample: tbodySample,
+      row_sample: rowSample,
+    });
+  }
 
   log.info('process_regular_done', {
     races: raceCount,
@@ -185,6 +255,7 @@ function processRegularPoints(html, log = logger) {
     rows_parsed: rowsParsed,
     rows_classified: rowsClassified,
     rows_with_few_cells: rowsWithFewCells,
+    event_id_pattern_used: eventIdPatternUsed,
     parse_warnings: parseDiagnostics.warnings,
   });
   return {
