@@ -313,9 +313,10 @@ function processRegularPoints(html, log = logger) {
   };
 }
 
-// Helper function to process cyclocross points from HTML
-function processCyclocrossPoints(_html) {
-  // Cyclocross disabled
+// Helper function to process cyclocross points from HTML.
+// Currently unused (cyclocross UI is disabled) but kept for reference if
+// the discipline is re-enabled.
+function _processCyclocrossPoints(_html) {
   return { raceCount: 0, totalPoints: 0, regionalPoints: 0, nationalPoints: 0 };
 }
 

@@ -1,25 +1,24 @@
-# ---------- Stage 1: Build React App ----------
+# ---------- Stage 1: Build (frontend + TypeScript backend) ----------
 FROM node:20-bookworm AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
-# Avoid downloading Chromium during build if using puppeteer (not puppeteer-core)
-# We install Google Chrome ourselves in the runtime stage.
+# Avoid downloading Chromium during build; we install Google Chrome ourselves
+# in the runtime stage.
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 RUN npm ci
 
 COPY . .
-RUN npx vite build
+RUN npx vite build && npx tsc -p tsconfig.server.json
 
 # ---------- Stage 2: Runtime: Node + Google Chrome ----------
 FROM node:20-bookworm
 WORKDIR /app
 
-# App env
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# 1) Install Google Chrome + minimal deps + fonts (for PDF/text rendering)
+# Install Google Chrome + minimal deps + fonts.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget gnupg ca-certificates fonts-liberation fonts-noto-color-emoji \
     libasound2 libatk-bridge2.0-0 libatk1.0-0 libatspi2.0-0 \
@@ -35,19 +34,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get install -y --no-install-recommends google-chrome-stable \
     && rm -rf /var/lib/apt/lists/*
 
-# 2) Ensure Puppeteer finds Chrome and doesn’t try to download its own
+# Both env vars are read by Puppeteer / our resolveChromeExecutable helper.
 ENV CHROME_PATH=/usr/bin/google-chrome
+ENV CHROME_EXECUTABLE=/usr/bin/google-chrome
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 
-# 3) Install only production deps
+# Production deps only.
 COPY package.json package-lock.json* ./
 RUN npm ci --omit=dev
 
-# 4) Copy built assets and server code
+# Built assets and compiled server code. We ship the JS scraper alongside
+# because the TypeScript backend `require`s it directly.
 COPY --from=builder /app/dist ./client
-COPY server.js .
+COPY --from=builder /app/dist-server ./dist-server
 COPY services ./services
 
 EXPOSE 3000
-CMD ["node", "server.js"]
+CMD ["node", "dist-server/index.js"]

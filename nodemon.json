@@ -1,6 +1,7 @@
 {
-  "watch": ["server.js"],
-  "ext": "js",
-  "ignore": ["node_modules/", "client/"],
+  "watch": ["src-server", "services"],
+  "ext": "ts,js,json",
+  "ignore": ["node_modules/", "client/", "dist-server/", "cache/", "debug/"],
+  "exec": "tsx src-server/index.ts",
   "verbose": true
 }

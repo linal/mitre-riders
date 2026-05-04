@@ -6,3 +6,5 @@ node_modules
 .env.production
 cache
 debug
+dist/*
+dist-server/*

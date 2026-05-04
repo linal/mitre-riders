@@ -1,23 +1,45 @@
-FROM node:18-slim
+FROM node:20-slim
 
-# Install curl
-RUN apt-get update && apt-get install -y curl
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Create a simple script to run the job
-RUN echo '#!/bin/sh\n\
-echo "Starting cache build job for year $(date +%Y)"\n\
-curl "https://mitre-riders.fly.dev/api/build-cache" \\\n\
-  -H "accept: */*" \\\n\
-  -H "content-type: application/json" \\\n\
-  --data-raw "{\"year\":\"$(date +%Y)\"}" \\\n\
-  -v\n\
-echo "Job completed at $(date)"\n\
-' > /app/run-job.sh
+# The cron job posts to the protected /api/build-cache endpoint using a
+# pre-shared token (CACHE_BUILD_TOKEN). The receiving server compares this
+# against the same env var; if either side lacks it the request 401s.
+#
+# Configure the secret with:
+#   fly secrets set --app mitre-riders-job CACHE_BUILD_TOKEN=...
+#   fly secrets set --app mitre-riders     CACHE_BUILD_TOKEN=...
+#
+# TARGET_URL defaults to the public Fly URL but is overrideable so the same
+# image can be reused for staging.
+ENV TARGET_URL="https://mitre-riders.fly.dev/api/build-cache"
 
-# Make the script executable
+RUN cat > /app/run-job.sh <<'SH'
+#!/bin/sh
+set -eu
+
+if [ -z "${CACHE_BUILD_TOKEN:-}" ]; then
+  echo "ERROR: CACHE_BUILD_TOKEN env var not set; the request will be rejected." >&2
+  exit 2
+fi
+
+YEAR="${YEAR:-$(date +%Y)}"
+echo "Starting cache build job for year ${YEAR} -> ${TARGET_URL}"
+
+curl --fail --show-error --silent --location \
+  -H "accept: application/json" \
+  -H "content-type: application/json" \
+  -H "x-cache-build-token: ${CACHE_BUILD_TOKEN}" \
+  --data-raw "{\"year\":\"${YEAR}\"}" \
+  "${TARGET_URL}"
+
+echo
+echo "Job completed at $(date -u +%FT%TZ)"
+SH
+
 RUN chmod +x /app/run-job.sh
 
-# Set the script as the entrypoint
 ENTRYPOINT ["/app/run-job.sh"]
