@@ -111,8 +111,6 @@ Open http://localhost:3000.
 | `npm test` | Vitest unit/integration tests |
 | `npm run test:e2e` | Playwright smoke tests |
 
-A pre-commit hook (Husky + lint-staged) runs ESLint and Prettier on staged files automatically.
-
 ## Building for Production
 
 ```sh

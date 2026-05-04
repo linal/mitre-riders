@@ -23,8 +23,7 @@
     "typecheck:tests": "tsc -p tsconfig.tests.json --noEmit",
     "test": "vitest",
     "test:watch": "vitest watch",
-    "test:e2e": "playwright test",
-    "prepare": "husky"
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.0",
@@ -68,9 +67,7 @@
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.12",
     "globals": "^15.11.0",
-    "husky": "^9.1.6",
     "jsdom": "^25.0.1",
-    "lint-staged": "^15.2.10",
     "nodemon": "^3.0.1",
     "pino-pretty": "^11.3.0",
     "postcss": "^8.4.27",
