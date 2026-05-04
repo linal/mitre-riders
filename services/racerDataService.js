@@ -58,13 +58,57 @@ function processRegularPoints(html, log = logger) {
   let rowsWithFewCells = 0;
   let rowsClassified = 0;
 
-  const tbodyStart = html.indexOf('<tbody>');
-  const tbodyEnd = html.indexOf('</tbody>');
-  const tbodyFound = tbodyStart !== -1 && tbodyEnd !== -1;
+  // Locate the points tbody. The page contains multiple <tbody> elements
+  // (Google Custom Search injects one near the top, navigation widgets
+  // sometimes add others), so we cannot just take the first one. The
+  // points table is uniquely identified by the fact that its <tfoot>
+  // contains the season total, and nothing else on the page has a tfoot.
+  // We therefore find the </tbody> immediately preceding <tfoot>, then
+  // walk back to its matching opening tag - this picks the points tbody
+  // robustly regardless of how many other tbodies the layout contains.
+  let tbodyStart = -1;
+  let tbodyEnd = -1;
+  let tbodyLocator = null;
+
+  const tfootProbe = html.indexOf('<tfoot');
+  if (tfootProbe !== -1) {
+    const closeIdx = html.lastIndexOf('</tbody>', tfootProbe);
+    if (closeIdx !== -1) {
+      const openIdx = html.lastIndexOf('<tbody', closeIdx);
+      if (openIdx !== -1) {
+        const openTagEnd = html.indexOf('>', openIdx);
+        if (openTagEnd !== -1 && openTagEnd < closeIdx) {
+          tbodyStart = openTagEnd + 1;
+          tbodyEnd = closeIdx;
+          tbodyLocator = 'before_tfoot';
+        }
+      }
+    }
+  }
+
+  // Last-resort fallback: the legacy first-tbody behaviour. Only used if
+  // the tfoot anchor failed (page has no tfoot at all). This will likely
+  // produce the wrong tbody on the current BC layout, but will at least
+  // emit the parse warnings that brought us here.
+  if (tbodyStart === -1) {
+    const openIdx = html.indexOf('<tbody');
+    if (openIdx !== -1) {
+      const openTagEnd = html.indexOf('>', openIdx);
+      const closeIdx = html.indexOf('</tbody>', openTagEnd === -1 ? openIdx : openTagEnd);
+      if (openTagEnd !== -1 && closeIdx !== -1) {
+        tbodyStart = openTagEnd + 1;
+        tbodyEnd = closeIdx;
+        tbodyLocator = 'first_tbody_fallback';
+      }
+    }
+  }
+
+  const tbodyFound = tbodyStart !== -1 && tbodyEnd !== -1 && tbodyEnd > tbodyStart;
   log.debug('process_regular_tbody', {
     tbody_found: tbodyFound,
     tbody_start: tbodyStart,
     tbody_end: tbodyEnd,
+    tbody_locator: tbodyLocator,
   });
 
   if (!tbodyFound && html.length > 50000) {
@@ -204,6 +248,7 @@ function processRegularPoints(html, log = logger) {
   const parseDiagnostics = {
     tbody_found: tbodyFound,
     tbody_length: tbodyFound ? tbodyEnd - tbodyStart : 0,
+    tbody_locator: tbodyLocator,
     rows_parsed: rowsParsed,
     rows_classified: rowsClassified,
     rows_with_few_cells: rowsWithFewCells,
@@ -255,6 +300,7 @@ function processRegularPoints(html, log = logger) {
     rows_parsed: rowsParsed,
     rows_classified: rowsClassified,
     rows_with_few_cells: rowsWithFewCells,
+    tbody_locator: tbodyLocator,
     event_id_pattern_used: eventIdPatternUsed,
     parse_warnings: parseDiagnostics.warnings,
   });
