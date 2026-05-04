@@ -34,6 +34,9 @@ module.exports = tseslint.config(
     rules: {
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       '@typescript-eslint/no-explicit-any': 'warn',
+      // All server logging must go through the pino logger so output is
+      // single-line JSON, not free-form console text.
+      'no-console': 'error',
     },
   },
   // Backend legacy JS (services/, root server.js shim)
@@ -46,7 +49,14 @@ module.exports = tseslint.config(
     },
     rules: {
       'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      'no-console': 'error',
     },
+  },
+  // Tooling configs that legitimately log to the user's terminal
+  // (vite.config.js, eslint.config.js itself, postcss/tailwind, etc.).
+  {
+    files: ['vite.config.{js,ts}', 'eslint.config.js', '*.config.{js,cjs}'],
+    rules: { 'no-console': 'off' },
   },
   // Frontend (React) - JS/TS/JSX/TSX
   {
@@ -73,7 +83,15 @@ module.exports = tseslint.config(
       'react/prop-types': 'off',
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       '@typescript-eslint/no-explicit-any': 'warn',
+      // Frontend code must use shared/logger, which emits structured JSON
+      // entries via console under the hood. Direct console.* is a bug.
+      'no-console': 'error',
     },
+  },
+  // The browser logger is the one place allowed to call console.*.
+  {
+    files: ['src/shared/logger.ts'],
+    rules: { 'no-console': 'off' },
   },
   // Tests (TypeScript)
   {

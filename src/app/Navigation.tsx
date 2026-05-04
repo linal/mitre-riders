@@ -4,6 +4,9 @@ import { getAuth, signOut } from 'firebase/auth';
 import AuthStatus from '../features/auth/AuthStatus';
 import { useAuth } from '../shared/hooks/useAuth';
 import { useTheme } from '../shared/theme/ThemeProvider';
+import { logger } from '../shared/logger';
+
+const log = logger.child({ component: 'navigation' });
 
 export default function Navigation() {
   const { darkMode, toggleDarkMode } = useTheme();
@@ -28,7 +31,7 @@ export default function Navigation() {
       await signOut(getAuth());
       navigate('/login');
     } catch (error) {
-      console.error('Error signing out:', error);
+      log.error('signout_failed', { err: error });
     }
   };
 

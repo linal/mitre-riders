@@ -1,9 +1,10 @@
 import pino, { type Logger } from 'pino';
 import { env } from './env';
 
-// Single Pino instance for the whole server. Replaces the bespoke logger in
-// services/logger.js while preserving the same JSON-on-stdout behaviour for
-// log aggregators. Pretty-printing in dev only.
+// Single Pino instance for the whole server. Always emits JSON to stdout so
+// every log line is machine-parseable by aggregators (Fly, Datadog, Loki,
+// jq, ...). Pretty-printing is strictly opt-in via LOG_PRETTY=1, never
+// auto-enabled, so dev and prod environments produce identical formats.
 export const logger: Logger = pino({
   level: env.LOG_LEVEL,
   base: { component: 'server' },
@@ -11,7 +12,7 @@ export const logger: Logger = pino({
     level: (label) => ({ level: label }),
   },
   timestamp: () => `,"ts":"${new Date().toISOString()}"`,
-  ...(env.LOG_PRETTY || (!env.IS_PRODUCTION && process.stdout.isTTY)
+  ...(env.LOG_PRETTY
     ? {
         transport: {
           target: 'pino-pretty',

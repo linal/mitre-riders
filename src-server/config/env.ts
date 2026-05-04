@@ -34,7 +34,19 @@ const schema = z.object({
 
 const parsed = schema.safeParse(process.env);
 if (!parsed.success) {
-  console.error('Invalid environment configuration:', parsed.error.flatten().fieldErrors);
+  // Emit a JSON line directly to stderr. We can't use the pino logger here
+  // because logger.ts imports this module, so doing so would create a
+  // circular dependency at boot. Keeping the same shape Pino uses
+  // (ts/level/component/msg) so log aggregators don't see two formats.
+  process.stderr.write(
+    JSON.stringify({
+      level: 'fatal',
+      ts: new Date().toISOString(),
+      component: 'env',
+      msg: 'invalid_environment_configuration',
+      issues: parsed.error.flatten().fieldErrors,
+    }) + '\n',
+  );
   process.exit(1);
 }
 
