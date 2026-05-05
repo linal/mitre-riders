@@ -7,6 +7,7 @@ primary_region = "lhr"  # London region, change as needed
 [env]
   NODE_ENV = "production"
   PORT = "3000"
+  ALLOWED_ORIGINS = "https://mitre-riders.fly.dev"
 
 [http_service]
   internal_port = 3000

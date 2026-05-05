@@ -41,7 +41,11 @@ export function createApp(): Express {
         if (!env.IS_PRODUCTION && /^https?:\/\/localhost(:\d+)?$/.test(origin)) {
           return callback(null, true);
         }
-        callback(new Error(`Origin ${origin} not allowed by CORS policy`));
+        // Unknown origin: don't throw (that becomes a 500 and kills static
+        // asset loads triggered by Vite's <script crossorigin> tags). Just
+        // omit the Access-Control-Allow-Origin header; the browser's
+        // same-origin policy will still block any genuine cross-origin reads.
+        callback(null, false);
       },
       credentials: true,
     }),
