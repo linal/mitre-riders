@@ -4,6 +4,18 @@ primary_region = "lhr"  # London region, change as needed
 [build]
   dockerfile = "Dockerfile"
 
+  # Vite needs these at build time (it inlines them into the JS bundle).
+  # Firebase web config values are public identifiers, not secrets, so it's
+  # safe to commit them. Fill these in with the values from the Firebase
+  # console - Project Settings - Your apps - Web app.
+[build.args]
+  VITE_FIREBASE_API_KEY = "AIzaSyBW72KiOT4TYXx8tbTQA2g1GjRMA4-yJ3k"
+  VITE_FIREBASE_AUTH_DOMAIN = "mitre-riders.firebaseapp.com"
+  VITE_FIREBASE_PROJECT_ID = "mitre-riders"
+  VITE_FIREBASE_STORAGE_BUCKET = "mitre-riders.firebasestorage.app"
+  VITE_FIREBASE_MESSAGING_SENDER_ID = "701709492859"
+  VITE_FIREBASE_APP_ID = "1:701709492859:web:00f2529f28b096f94038de"
+
 [env]
   NODE_ENV = "production"
   PORT = "3000"

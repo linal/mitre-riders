@@ -9,6 +9,24 @@ ENV PUPPETEER_SKIP_DOWNLOAD=true
 RUN npm ci
 
 COPY . .
+
+# Vite inlines VITE_* values at build time, so they must be present here -
+# setting them as Fly runtime env/secrets is too late. Pass via
+# `fly deploy --build-arg VITE_FIREBASE_API_KEY=...` or via [build.args] in
+# fly.toml. Firebase web config values are public identifiers, not secrets.
+ARG VITE_FIREBASE_API_KEY
+ARG VITE_FIREBASE_AUTH_DOMAIN
+ARG VITE_FIREBASE_PROJECT_ID
+ARG VITE_FIREBASE_STORAGE_BUCKET
+ARG VITE_FIREBASE_MESSAGING_SENDER_ID
+ARG VITE_FIREBASE_APP_ID
+ENV VITE_FIREBASE_API_KEY=$VITE_FIREBASE_API_KEY \
+    VITE_FIREBASE_AUTH_DOMAIN=$VITE_FIREBASE_AUTH_DOMAIN \
+    VITE_FIREBASE_PROJECT_ID=$VITE_FIREBASE_PROJECT_ID \
+    VITE_FIREBASE_STORAGE_BUCKET=$VITE_FIREBASE_STORAGE_BUCKET \
+    VITE_FIREBASE_MESSAGING_SENDER_ID=$VITE_FIREBASE_MESSAGING_SENDER_ID \
+    VITE_FIREBASE_APP_ID=$VITE_FIREBASE_APP_ID
+
 RUN npx vite build && npx tsc -p tsconfig.server.json
 
 # ---------- Stage 2: Runtime: Node + Google Chrome ----------
