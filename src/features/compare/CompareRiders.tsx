@@ -227,7 +227,7 @@ function RiderHeader({
         {rider?.name || data?.name || 'Unknown'}
       </div>
       <div className="text-sm text-gray-600 dark:text-gray-300">
-        {rider?.bc} \u2022 {data?.club || 'Unknown'} {data?.category ? `\u2022 ${data.category}` : ''}
+        {rider?.bc} • {data?.club || 'Unknown'} {data?.category ? `• ${data.category}` : ''}
       </div>
     </div>
   );
