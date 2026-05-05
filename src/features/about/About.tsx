@@ -6,7 +6,7 @@ export default function About() {
     <PageContainer>
       <div className="border-l-4 border-blue-600 rounded shadow-md p-4 mb-6 mx-2 bg-white dark:bg-gray-800">
         <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">
-          About British Cycling Club Viewer
+          About PeloPoints
         </h2>
 
         <section className="mb-6">

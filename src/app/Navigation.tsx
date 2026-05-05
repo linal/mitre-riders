@@ -5,6 +5,7 @@ import AuthStatus from '../features/auth/AuthStatus';
 import { useAuth } from '../shared/hooks/useAuth';
 import { useTheme } from '../shared/theme/ThemeProvider';
 import { logger } from '../shared/logger';
+import Logo from './Logo';
 
 const log = logger.child({ component: 'navigation' });
 
@@ -196,9 +197,22 @@ export default function Navigation() {
             showLabels ? 'px-4 py-4 justify-between' : 'px-2 py-4 justify-center',
           ].join(' ')}
         >
-          {showLabels && (
-            <span className="font-bold text-lg truncate">British Cycling Club Viewer</span>
-          )}
+          <Link
+            to="/"
+            onClick={close}
+            aria-label="PeloPoints - Home"
+            className={[
+              'flex items-center gap-2 min-w-0 rounded hover:opacity-90',
+              showLabels ? '' : 'justify-center',
+            ].join(' ')}
+          >
+            <Logo size={showLabels ? 32 : 36} className="shrink-0" />
+            {showLabels && (
+              <span className="font-bold text-lg leading-tight truncate">
+                PeloPoints
+              </span>
+            )}
+          </Link>
           <button
             type="button"
             onClick={() => setCollapsed((c) => !c)}

@@ -1,4 +1,4 @@
-# British Cycling Club Viewer
+# PeloPoints
 
 A web application for tracking and displaying British Cycling race points for riders across multiple clubs. Browse club rosters, view rider race history and points across disciplines (Road & Track, Cyclocross), compare riders side-by-side, and manage clubs/riders behind an authenticated admin area.
 
@@ -124,8 +124,8 @@ npm start   # serves client/ on :4173 and runs dist-server/index.js
 ### Main Application
 
 ```sh
-docker build -t british-cycling-club-viewer .
-docker run -p 3000:3000 british-cycling-club-viewer
+docker build -t pelopoints .
+docker run -p 3000:3000 pelopoints
 ```
 
 ### Cache Building Job

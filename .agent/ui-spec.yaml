@@ -1,6 +1,6 @@
 uiSpecVersion: 1.0.0
 app:
-  name: British Cycling Club Viewer
+  name: PeloPoints
   description: UI specification mapping pages/routes to behaviors and backend endpoints
   framework:
     library: react

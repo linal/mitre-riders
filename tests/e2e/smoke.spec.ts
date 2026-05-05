@@ -13,12 +13,12 @@ test.beforeEach(async ({ page }) => {
 
 test('homepage shows the club list', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByText('British Cycling Club Viewer')).toBeVisible();
+  await expect(page.getByText('PeloPoints')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Mitre CC' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Test Club' })).toBeVisible();
 });
 
 test('about page renders', async ({ page }) => {
   await page.goto('/about');
-  await expect(page.getByRole('heading', { name: /About British Cycling Club Viewer/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /About PeloPoints/i })).toBeVisible();
 });
