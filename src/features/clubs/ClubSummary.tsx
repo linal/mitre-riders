@@ -87,7 +87,7 @@ function FormattedChange({
   return (
     <span className={colorClass}>
       {sign}
-      {change.toFixed(1)}% ({previous} \u2192 {current})
+      {change.toFixed(1)}% ({previous} → {current})
     </span>
   );
 }
@@ -102,9 +102,9 @@ export default function ClubSummary() {
   const decodedClub = clubName ? decodeURIComponent(clubName) : null;
   const prevYear = String(parseInt(year, 10) - 1);
 
-  const { data: currentData, isFetching: loadingCurrent, refetch: refetchCurrent, error: errorCurrent } =
+  const { data: currentData, isFetching: loadingCurrent, error: errorCurrent } =
     useAllRaceData(year);
-  const { data: prevData, isFetching: loadingPrev, refetch: refetchPrev } =
+  const { data: prevData, isFetching: loadingPrev } =
     useAllRaceData(showComparison ? prevYear : null);
 
   const summary = useMemo(
@@ -183,16 +183,6 @@ export default function ClubSummary() {
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-gray-500 hover:bg-gray-600 dark:bg-gray-600 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
               >
                 {showComparison ? 'Hide Comparison' : 'Show Comparison'}
-              </button>
-              <button
-                onClick={() => {
-                  refetchCurrent();
-                  if (showComparison) refetchPrev();
-                }}
-                disabled={isLoading}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-              >
-                {isLoading ? 'Loading...' : 'Refresh Data'}
               </button>
             </div>
           </div>

@@ -9,9 +9,11 @@ import './firebase';
 function App() {
   return (
     <Providers>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen flex bg-gray-50 dark:bg-gray-900">
         <Navigation />
-        <AppRoutes />
+        <main className="flex-1 min-w-0">
+          <AppRoutes />
+        </main>
       </div>
     </Providers>
   );

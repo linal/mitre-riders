@@ -11,7 +11,7 @@ A web application for tracking and displaying British Cycling race points for ri
 - Per-rider race points across multiple disciplines and seasons
 - Filter and sort riders (name, races, points, category)
 - Compare riders side-by-side via shareable URLs
-- Authenticated admin area (Firebase Auth):
+- Admin area gated by Firebase Auth + an `admin: true` custom claim:
   - Manage clubs (`/manage-clubs`)
   - Manage riders (`/manage-riders`)
   - Inspect / refresh cache (`/cache`)
@@ -110,6 +110,7 @@ Open http://localhost:3000.
 | `npm run typecheck` | `tsc -b` over both client and server projects |
 | `npm test` | Vitest unit/integration tests |
 | `npm run test:e2e` | Playwright smoke tests |
+| `npm run set-admin -- <email>` | Grant the `admin` custom claim (add `--revoke` to remove). See [Admin access](#admin-access). |
 
 ## Building for Production
 
@@ -189,15 +190,55 @@ Configuration lives in `.env` (gitignored). See `.env.example` for the full temp
 - `FIREBASE_CLIENT_EMAIL`
 - `FIREBASE_PRIVATE_KEY` (escape newlines as `\n`)
 
-Or point Firebase Admin at a credentials file via `GOOGLE_APPLICATION_CREDENTIALS=./service-account.json`. On Fly.io these are provided via `fly secrets set`.
+Or point Firebase Admin at a credentials file via `GOOGLE_APPLICATION_CREDENTIALS=./service-account.json`. On Fly.io these are provided via `fly secrets set`. These are the same credentials `npm run set-admin` uses, so the script must run somewhere with the server `.env` loaded (see [Admin access](#admin-access)).
 
 > Never commit real values. `.env` is in `.gitignore`; only `.env.example` is tracked.
 
 ## Authentication
 
 - Public routes: clubs list, club riders, club summary, compare, about.
-- Protected routes (require Firebase login): `/cache`, `/manage-riders`, `/manage-clubs`.
-- The server verifies Firebase ID tokens (passed as `Authorization: Bearer <token>`) for write/admin endpoints, and additionally accepts the `X-Cache-Build-Token` header on `/api/build-cache` for the cron job.
+- Admin-only routes (require Firebase login **and** the `admin: true` custom claim): `/cache`, `/manage-riders`, `/manage-clubs`. Logging in alone is not enough.
+- The server verifies Firebase ID tokens (passed as `Authorization: Bearer <token>`) and rejects writes from non-admin users with `403`. The cron job is unaffected: `/api/build-cache` still accepts the `X-Cache-Build-Token` header.
+
+## Admin access
+
+Admin status is granted via a Firebase Auth **custom claim** (`admin: true`).
+
+> **No Firebase Console changes are required.** Custom claims cannot be set from the Firebase Console UI – they are set programmatically via the Admin SDK. There is no roles or claims toggle to look for in the console.
+
+The bundled `set-admin` script reuses the same Admin SDK credentials already documented in [Environment Variables](#environment-variables) (`FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`, or `GOOGLE_APPLICATION_CREDENTIALS`). No new service account, IAM role, or Firebase product is needed.
+
+### Granting and revoking
+
+```sh
+npm run set-admin -- user@example.com           # grant admin
+npm run set-admin -- user@example.com --revoke  # revoke admin
+```
+
+Run this somewhere with the server `.env` loaded (e.g. your dev machine) – not on a stripped-down CI runner.
+
+### Token refresh caveat
+
+Custom claims only appear in a user's ID token after the next refresh. Until then the user will keep getting `403` from admin endpoints even though the claim is set server-side. To pick up the new claim, either:
+
+- sign out and back in, or
+- in the browser console while signed in: `await firebase.auth().currentUser.getIdToken(true)`.
+
+### Bootstrapping the first admin
+
+1. Register normally through `/register`.
+2. From a machine with the server env configured, run `npm run set-admin -- <your-email>`.
+3. Sign out and back in.
+
+### Verifying the claim
+
+For troubleshooting, run this in the browser console while signed in:
+
+```js
+(await firebase.auth().currentUser.getIdTokenResult(true)).claims.admin
+```
+
+It should print `true` for an admin and `undefined` otherwise.
 
 ## Caching
 

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { verifyToken } from '../middleware/auth';
+import { requireAdmin, verifyToken } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { clubNameParam } from '../schemas';
 import { deleteClub, getClubsFile, listClubNames } from '../services/clubsStore';
@@ -26,6 +26,7 @@ router.get('/clubs-file', async (_req, res, next) => {
 router.delete(
   '/clubs/:clubName',
   verifyToken,
+  requireAdmin,
   validate('params', clubNameParam),
   async (req, res, next) => {
     try {

@@ -19,9 +19,10 @@ vi.mock('firebase-admin', () => ({
 }));
 vi.mock('../../src-server/middleware/auth', () => ({
   verifyToken: (req: unknown, _res: unknown, next: () => void) => {
-    (req as { user?: unknown }).user = { uid: 'test-user' };
+    (req as { user?: unknown }).user = { uid: 'test-user', admin: true };
     next();
   },
+  requireAdmin: (_req: unknown, _res: unknown, next: () => void) => next(),
 }));
 
 vi.mock('../../src-server/services/racerScraper', () => ({

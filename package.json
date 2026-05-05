@@ -23,7 +23,8 @@
     "typecheck:tests": "tsc -p tsconfig.tests.json --noEmit",
     "test": "vitest",
     "test:watch": "vitest watch",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "set-admin": "tsx scripts/set-admin.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.0",
