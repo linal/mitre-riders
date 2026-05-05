@@ -106,7 +106,7 @@ const HamburgerIcon = () => (
 
 export default function Navigation() {
   const { darkMode, toggleDarkMode } = useTheme();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -215,11 +215,11 @@ export default function Navigation() {
           <NavRow to="/about" icon={<AboutIcon />} label="About" />
           <NavRow to="/compare" icon={<CompareIcon />} label="Compare" />
 
-          {user && (
+          {isAdmin && (
             <div className="pt-4">
               {showLabels ? (
                 <div className="px-3 pb-1 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  Settings
+                  Admin
                 </div>
               ) : (
                 <div className="mx-2 mb-1 border-t dark:border-gray-700" />
@@ -227,6 +227,14 @@ export default function Navigation() {
               <NavRow to="/cache" icon={<CacheIcon />} label="Cache Manager" />
               <NavRow to="/manage-riders" icon={<RidersIcon />} label="Manage Riders" />
               <NavRow to="/manage-clubs" icon={<ClubsAdminIcon />} label="Manage Clubs" />
+            </div>
+          )}
+
+          {user && (
+            <div className="pt-4">
+              {!isAdmin && !showLabels && (
+                <div className="mx-2 mb-1 border-t dark:border-gray-700" />
+              )}
               <button
                 type="button"
                 onClick={handleLogout}

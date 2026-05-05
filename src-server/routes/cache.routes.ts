@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { verifyToken } from '../middleware/auth';
+import { requireAdmin, verifyToken } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { buildCacheBody, yearParam } from '../schemas';
 import {
@@ -23,6 +23,7 @@ router.get('/cache/:year', validate('params', yearParam), async (req, res, next)
 router.delete(
   '/cache/:year',
   verifyToken,
+  requireAdmin,
   validate('params', yearParam),
   async (req, res, next) => {
     try {
@@ -40,7 +41,7 @@ router.delete(
   },
 );
 
-router.post('/build-cache', verifyToken, validate('body', buildCacheBody), async (req, res, next) => {
+router.post('/build-cache', verifyToken, requireAdmin, validate('body', buildCacheBody), async (req, res, next) => {
   try {
     const { year, racerId } = req.body as { year: string; racerId?: string };
     const results = await buildCacheBatch(year, racerId);

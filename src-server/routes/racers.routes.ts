@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { verifyToken } from '../middleware/auth';
+import { requireAdmin, verifyToken } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { bcParam, racerArray, racerAddBody } from '../schemas';
 import { addRacer, listRacers, removeRacer, replaceRacers } from '../services/racersStore';
@@ -15,7 +15,7 @@ router.get('/', async (_req, res, next) => {
   }
 });
 
-router.post('/', verifyToken, validate('body', racerArray), async (req, res, next) => {
+router.post('/', verifyToken, requireAdmin, validate('body', racerArray), async (req, res, next) => {
   try {
     const count = await replaceRacers(req.body as Awaited<ReturnType<typeof racerArray.parse>>);
     res.json({ success: true, count });
@@ -24,7 +24,7 @@ router.post('/', verifyToken, validate('body', racerArray), async (req, res, nex
   }
 });
 
-router.post('/add', verifyToken, validate('body', racerAddBody), async (req, res, next) => {
+router.post('/add', verifyToken, requireAdmin, validate('body', racerAddBody), async (req, res, next) => {
   try {
     const { bc } = req.body as { bc: string };
     const result = await addRacer(bc);
@@ -35,7 +35,7 @@ router.post('/add', verifyToken, validate('body', racerAddBody), async (req, res
   }
 });
 
-router.delete('/:bc', verifyToken, validate('params', bcParam), async (req, res, next) => {
+router.delete('/:bc', verifyToken, requireAdmin, validate('params', bcParam), async (req, res, next) => {
   try {
     const { bc } = req.params as { bc: string };
     const result = await removeRacer(bc);

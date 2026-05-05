@@ -41,3 +41,15 @@ export async function verifyToken(req: Request, res: Response, next: NextFunctio
     return res.status(403).json({ error: 'Forbidden: Invalid token' });
   }
 }
+
+/**
+ * Require the caller to have the `admin: true` custom claim. Must be used
+ * after `verifyToken`. Service-token requests (cron) are allowed through so
+ * the cache-build job keeps working without a user identity.
+ */
+export function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  if (req.serviceAuth) return next();
+  if (req.user?.admin === true) return next();
+  log.warn({ uid: req.user?.uid }, 'admin_required');
+  return res.status(403).json({ error: 'Forbidden: admin only' });
+}
