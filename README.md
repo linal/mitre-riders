@@ -42,7 +42,7 @@ A web application for tracking and displaying British Cycling race points for ri
 │   ├── features/
 │   │   ├── about/
 │   │   ├── admin/             # CacheManager, ManageRiders, ClubsManager
-│   │   ├── auth/              # Login, RegisterUser, ProtectedRoute, AuthStatus
+│   │   ├── auth/              # Login, RegisterUser, ProtectedRoute
 │   │   ├── clubs/             # ClubsList, ClubRiders, ClubSummary, RiderCard, FilterControls
 │   │   └── compare/           # CompareRiders
 │   ├── firebase.ts

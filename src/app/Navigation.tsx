@@ -1,7 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getAuth, signOut } from 'firebase/auth';
-import AuthStatus from '../features/auth/AuthStatus';
 import { useAuth } from '../shared/hooks/useAuth';
 import { useTheme } from '../shared/theme/ThemeProvider';
 import { logger } from '../shared/logger';
@@ -67,9 +66,12 @@ const ClubsAdminIcon = () => (
 
 const LogoutIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className={iconClass} viewBox="0 0 20 20" fill="currentColor">
+    {/* Door / panel on the left */}
+    <path d="M3 4a2 2 0 012-2h5a1 1 0 110 2H5v12h5a1 1 0 110 2H5a2 2 0 01-2-2V4z" />
+    {/* Arrow pointing out to the right */}
     <path
       fillRule="evenodd"
-      d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z"
+      d="M14.293 6.293a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 01-1.414-1.414L15.586 11H9a1 1 0 110-2h6.586l-1.293-1.293a1 1 0 010-1.414z"
       clipRule="evenodd"
     />
   </svg>
@@ -100,6 +102,32 @@ const HamburgerIcon = () => (
     <path
       fillRule="evenodd"
       d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm1 4a1 1 0 100 2h12a1 1 0 100-2H4z"
+      clipRule="evenodd"
+    />
+  </svg>
+);
+
+const SunIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={iconClass} viewBox="0 0 20 20" fill="currentColor">
+    <path
+      fillRule="evenodd"
+      d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"
+      clipRule="evenodd"
+    />
+  </svg>
+);
+
+const MoonIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={iconClass} viewBox="0 0 20 20" fill="currentColor">
+    <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+  </svg>
+);
+
+const UserIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={iconClass} viewBox="0 0 20 20" fill="currentColor">
+    <path
+      fillRule="evenodd"
+      d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
       clipRule="evenodd"
     />
   </svg>
@@ -194,7 +222,7 @@ export default function Navigation() {
         <div
           className={[
             'flex items-center border-b dark:border-gray-700',
-            showLabels ? 'px-4 py-4 justify-between' : 'px-2 py-4 justify-center',
+            showLabels ? 'px-4 py-4' : 'px-2 py-4 justify-center',
           ].join(' ')}
         >
           <Link
@@ -202,29 +230,38 @@ export default function Navigation() {
             onClick={close}
             aria-label="PeloPoints - Home"
             className={[
-              'flex items-center gap-2 min-w-0 rounded hover:opacity-90',
-              showLabels ? '' : 'justify-center',
+              'flex items-center gap-3 min-w-0 rounded hover:opacity-90',
+              showLabels ? 'p-1 -m-1' : 'justify-center',
             ].join(' ')}
           >
-            <Logo size={showLabels ? 32 : 36} className="shrink-0" />
+            <Logo size={32} className="shrink-0" />
             {showLabels && (
               <span className="font-bold text-lg leading-tight truncate">
                 PeloPoints
               </span>
             )}
           </Link>
-          <button
-            type="button"
-            onClick={() => setCollapsed((c) => !c)}
-            className="hidden md:inline-flex p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
-            aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
-            title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
-          >
-            {collapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
-          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-2 py-3 space-y-1">
+          {!user && (
+            <div className="pb-3 mb-2 border-b dark:border-gray-700">
+              <Link
+                to="/login"
+                onClick={close}
+                title={showLabels ? undefined : 'Login'}
+                aria-label="Login"
+                className={[
+                  'flex items-center gap-3 rounded text-sm hover:bg-gray-100 dark:hover:bg-gray-700',
+                  showLabels ? 'px-3 py-2' : 'px-2 py-2 justify-center',
+                ].join(' ')}
+              >
+                <UserIcon />
+                {showLabels && <span className="truncate">Login</span>}
+              </Link>
+            </div>
+          )}
+
           <NavRow to="/" icon={<ClubsIcon />} label="Clubs" />
           <NavRow to="/about" icon={<AboutIcon />} label="About" />
           <NavRow to="/compare" icon={<CompareIcon />} label="Compare" />
@@ -244,11 +281,44 @@ export default function Navigation() {
             </div>
           )}
 
-          {user && (
-            <div className="pt-4">
-              {!isAdmin && !showLabels && (
-                <div className="mx-2 mb-1 border-t dark:border-gray-700" />
+          <div className="pt-4">
+            {!isAdmin && !showLabels && (
+              <div className="mx-2 mb-1 border-t dark:border-gray-700" />
+            )}
+
+            {user && (
+              <div
+                title={showLabels ? undefined : (user.displayName || user.email || 'Account')}
+                aria-label="Signed in user"
+                className={[
+                  'flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300',
+                  showLabels ? 'px-3 py-2' : 'px-2 py-2 justify-center',
+                ].join(' ')}
+              >
+                <UserIcon />
+                {showLabels && (
+                  <span className="truncate">{user.displayName || user.email}</span>
+                )}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={toggleDarkMode}
+              title={showLabels ? undefined : darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+              aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+              className={[
+                'w-full flex items-center gap-3 rounded text-sm hover:bg-gray-100 dark:hover:bg-gray-700',
+                showLabels ? 'px-3 py-2 text-left' : 'px-2 py-2 justify-center',
+              ].join(' ')}
+            >
+              {darkMode ? <SunIcon /> : <MoonIcon />}
+              {showLabels && (
+                <span className="truncate">{darkMode ? 'Light mode' : 'Dark mode'}</span>
               )}
+            </button>
+
+            {user && (
               <button
                 type="button"
                 onClick={handleLogout}
@@ -262,27 +332,26 @@ export default function Navigation() {
                 <LogoutIcon />
                 {showLabels && <span className="truncate">Logout</span>}
               </button>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
 
-        <div
-          className={[
-            'border-t dark:border-gray-700',
-            showLabels
-              ? 'px-3 py-3 flex items-center justify-between'
-              : 'px-2 py-3 flex flex-col items-center gap-2',
-          ].join(' ')}
-        >
-          {showLabels && <AuthStatus />}
-          <button
-            onClick={toggleDarkMode}
-            className="p-2 rounded-full bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-yellow-300"
-            aria-label="Toggle dark mode"
-            title="Toggle dark mode"
-          >
-            {darkMode ? '\u2600\ufe0f' : '\u{1F319}'}
-          </button>
+          <div className="hidden md:block pt-1">
+            <button
+              type="button"
+              onClick={() => setCollapsed((c) => !c)}
+              title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+              aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+              className={[
+                'w-full flex items-center gap-3 rounded text-sm hover:bg-gray-100 dark:hover:bg-gray-700',
+                showLabels ? 'px-3 py-2 text-left' : 'px-2 py-2 justify-center',
+              ].join(' ')}
+            >
+              <span className={iconClass + ' inline-flex items-center justify-center'}>
+                {collapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+              </span>
+              {showLabels && <span className="truncate">Collapse</span>}
+            </button>
+          </div>
         </div>
       </nav>
     </>
