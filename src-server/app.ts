@@ -28,6 +28,13 @@ export function createApp(): Express {
     // scripts via Vite's build output.
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
+    // Firebase signInWithPopup opens <project>.firebaseapp.com and posts the
+    // auth result back via window.opener. Helmet's default COOP of
+    // 'same-origin' severs that handle and the SDK reports the misleading
+    // error 'auth/popup-closed-by-user'. 'same-origin-allow-popups' keeps
+    // cross-origin pages from messing with our window while still letting
+    // popups we open talk back to us.
+    crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
   }));
   app.use(compression());
 
