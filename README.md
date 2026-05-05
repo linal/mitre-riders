@@ -111,6 +111,7 @@ Open http://localhost:3000.
 | `npm test` | Vitest unit/integration tests |
 | `npm run test:e2e` | Playwright smoke tests |
 | `npm run set-admin -- <email>` | Grant the `admin` custom claim (add `--revoke` to remove). See [Admin access](#admin-access). |
+| `npm run generate:icons` | Regenerate `public/favicon.ico`, `favicon-*.png`, `apple-touch-icon.png` and `android-chrome-*.png` from `public/favicon.svg`. |
 
 ## Building for Production
 

@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>PeloPoints</title>
+  <defs>
+    <linearGradient id="ring" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1d4ed8" />
+      <stop offset="100%" stop-color="#dc2626" />
+    </linearGradient>
+    <style>
+      .ink { color: #1f2937; }
+      @media (prefers-color-scheme: dark) {
+        .ink { color: #f3f4f6; }
+      }
+    </style>
+  </defs>
+
+  <!-- Tyre / outer ring -->
+  <circle cx="32" cy="32" r="27" fill="none" stroke="url(#ring)" stroke-width="5" />
+
+  <!-- Spokes -->
+  <g class="ink" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.9">
+    <line x1="32" y1="9" x2="32" y2="55" />
+    <line x1="9" y1="32" x2="55" y2="32" />
+    <line x1="15.7" y1="15.7" x2="48.3" y2="48.3" />
+    <line x1="48.3" y1="15.7" x2="15.7" y2="48.3" />
+  </g>
+
+  <!-- Hub -->
+  <circle class="ink" cx="32" cy="32" r="5" fill="currentColor" />
+  <circle cx="32" cy="32" r="2" fill="#fff" />
+
+  <!-- Chainring chevron accent -->
+  <path d="M44 50 L52 50 L48 56 Z" fill="url(#ring)" />
+</svg>
