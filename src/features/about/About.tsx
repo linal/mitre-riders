@@ -48,7 +48,7 @@ export default function About() {
         <section className="mb-6">
           <h3 className="text-lg font-medium mb-2 text-gray-800 dark:text-white">How It Works</h3>
           <p className="text-sm leading-relaxed text-gray-600 dark:text-gray-300">
-            The backend scrapes each rider's race history from the British Cycling website,
+            The backend scrapes each rider&apos;s race history from the British Cycling website,
             de-duplicates events by ID, and exposes a small JSON API consumed by this React app.
             All aggregate statistics — points totals, race counts, category splits — are computed
             client-side from that data so the same dataset can power multiple views without extra
@@ -72,7 +72,7 @@ export default function About() {
               </li>
               <li>
                 <span className="font-medium text-gray-700 dark:text-gray-200">Previous years</span>{' '}
-                — cached indefinitely (results don't change retroactively).
+                — cached indefinitely (results don&apos;t change retroactively).
               </li>
             </ul>
           </div>
